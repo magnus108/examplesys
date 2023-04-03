@@ -3,6 +3,7 @@ module Main
   )
 where
 
+import qualified Piece.Core.Item.Tests
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -11,6 +12,5 @@ main =
   defaultMain $
     testGroup
       "Tests"
-      [ 
-        --Blog.Utils.Link.Tests.tests
+      [ Piece.Core.Item.Tests.tests
       ]

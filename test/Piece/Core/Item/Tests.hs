@@ -11,8 +11,9 @@ tests :: TestTree
 tests =
   testGroup "Piece.Core.Item.Tests" $
     concat
-      [ --fromAssertions
-        --  "forest"
-         -- [ forest @=? (T.trie project & F.fromTrie)
-          --]
+      [ fromAssertions
+          ""
+          []
       ]
+
+-- forest @=? (T.trie project & F.fromTrie)
