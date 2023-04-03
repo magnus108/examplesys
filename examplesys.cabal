@@ -20,7 +20,6 @@ library
     import: common-all
     build-depends:
         aeson
-        , cake-slayer
         , mtl
 
 

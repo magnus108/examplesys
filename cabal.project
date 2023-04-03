@@ -1,7 +1,0 @@
-packages: .
-
-source-repository-package
-    type: git
-    location: https://github.com/kowainik/cake-slayer.git
-    sha256: z9ut0y6umDIjJIRjz9KSvKgotuw06/S8QDwOtVdGiJ0=
-    tag: 20e0b0cf3277a6f63354c72758630fd3a22fef5c
