@@ -6,7 +6,25 @@ version: 1.0.0.0
 common common-all
     build-depends:
         base >=4.16 && <5
+        , mtl
         , relude
+        , aeason
+        , unliftio-core
+        , containers
+    other-modules:
+        Piece
+        Piece.App.Env
+        Piece.App.Error
+        Piece.App.Monad
+        Piece.CakeSlayer
+        Piece.CakeSlayer.Error
+        Piece.CakeSlayer.Has
+        Piece.CakeSlayer.Monad
+        Piece.Config
+        Piece.Core.Item
+        Piece.Core.Loan
+        Piece.Core.User
+        Piece.Db.Db
 
     mixins:
         base hiding (Prelude)
@@ -14,15 +32,32 @@ common common-all
         , relude
 
     default-language: Haskell2010
+
+    default-extensions:
+        ConstraintKinds
+        DeriveAnyClass
+        DeriveFunctor
+        DeriveGeneric
+        DerivingStrategies
+        FlexibleContexts
+        FlexibleInstances
+        GeneralizedNewtypeDeriving
+        InstanceSigs
+        KindSignatures
+        LambdaCase
+        MultiParamTypeClasses
+        OverloadedStrings
+        RecordWildCards
+        ScopedTypeVariables
+        StandaloneDeriving
+        TupleSections
+        TypeApplications
+        ViewPatterns
     ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
 
 library
     import: common-all
     build-depends:
-        aeson
-        , mtl
-
-
     hs-source-dirs:   src
 
 executable hello

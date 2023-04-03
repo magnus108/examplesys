@@ -1,12 +1,12 @@
-module Piece.Core.Item
-  ( Item,
+module Piece.Core.Loan
+  ( Loan,
     name,
   )
 where
 
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype Item = Item
+newtype Loan = Loan
   { name :: String
   }
   deriving stock (Show, Eq, Generic)

@@ -1,19 +1,28 @@
 {-# LANGUAGE DataKinds #-}
 
 module Piece.App.Env
-    ( Env (..)
-    ) where
+  ( Env,
+  )
+where
 
-import CakeSlayer.Has (Field (..), Has)
+import qualified Graphics.UI.Threepenny.Core
+import Piece.CakeSlayer.Has (Field (..), Has)
+import Piece.Core.Item (Item)
+import Piece.Core.Loan (Loan)
+import Piece.Core.User (User)
+import Piece.Db.Db (Database, DatabaseKey)
 
 data Env (m :: Type -> Type) = Env
-    { --envLogAction :: LogAction m Message
-    --, envDbPool    :: DbPool
-    } --deriving (Has DbPool) via Field "envDbPool" (Env m)
+  { loanEnv :: LoanEnv
+  }
+  deriving (Has LoanEnv) via Field "loanEnv" (Env m)
 
-instance HasLog (Env m) Message m where
-    --getLogAction :: Env m -> LogAction m Message
-    --getLogAction = envLogAction
-
-    --setLogAction :: LogAction m Message -> Env m -> Env m
-    --setLogAction newAction env = env { envLogAction = newAction }
+data LoanEnv = LoanEnv
+  { bDatabaseLoan :: Behavior (Database Loan),
+    bSelectionUser :: Behavior (Maybe DatabaseKey),
+    bSelectionItem :: Behavior (Maybe DatabaseKey),
+    bSelectionLoan :: Behavior (Maybe DatabaseKey),
+    bFilterUser :: Behavior String,
+    bFilterItem :: Behavior String,
+    bModalState :: Behavior Bool
+  }
