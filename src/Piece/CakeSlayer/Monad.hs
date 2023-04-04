@@ -7,6 +7,7 @@ where
 
 import Control.Exception (catch, throwIO, try)
 import Control.Monad.Except (MonadError (..))
+import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
@@ -21,6 +22,7 @@ newtype App (err :: Type) env a = App
       MonadFail,
       MonadReader env,
       MonadIO,
+      MonadFix,
       MonadUnliftIO
     )
 

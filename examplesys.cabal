@@ -8,9 +8,10 @@ common common-all
         base >=4.16 && <5
         , mtl
         , relude
-        , aeason
+        , aeson
         , unliftio-core
         , containers
+        , threepenny-gui
     other-modules:
         Piece
         Piece.App.Env
@@ -25,6 +26,8 @@ common common-all
         Piece.Core.Loan
         Piece.Core.User
         Piece.Db.Db
+        Piece.Db.Loan 
+        Piece.Gui.Loan.Create
 
     mixins:
         base hiding (Prelude)
@@ -53,6 +56,7 @@ common common-all
         TupleSections
         TypeApplications
         ViewPatterns
+        DerivingVia
     ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
 
 library
@@ -60,12 +64,12 @@ library
     build-depends:
     hs-source-dirs:   src
 
-executable hello
+executable examplesys
     import: common-all
     main-is: Main.hs
     hs-source-dirs: app, src
 
-test-suite hello-test
+test-suite examplesys-test
     import: common-all
     type: exitcode-stdio-1.0
     main-is: Spec.hs

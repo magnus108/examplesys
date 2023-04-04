@@ -7,6 +7,7 @@ module Piece.App.Monad
 where
 
 import Control.Monad.Except (MonadError)
+import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Piece.App.Env (Env)
 import Piece.App.Error (AppError)
@@ -25,6 +26,7 @@ newtype App a = App
       MonadIO,
       MonadUnliftIO,
       MonadReader AppEnv,
+      MonadFix,
       MonadError (ErrorWithSource AppError)
     )
 

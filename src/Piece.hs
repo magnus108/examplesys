@@ -1,60 +1,78 @@
 module Piece
-  ( mkAppEnv,
-    runServer,
-    main,
+  ( main,
   )
 where
 
-import Piece.App.Env (Env)
+import Control.Monad.Fix
+import Graphics.UI.Threepenny.Core ((#+))
+import qualified Graphics.UI.Threepenny.Core as UI
+import qualified Piece.App.Env as Env
 import Piece.App.Monad (AppEnv, runApp)
-import Piece.Config (loadConfig)
-import qualified Graphics.UI.Threepenny.Core as Threepenny
-
+import qualified Piece.Config as Config
+import Piece.Core.Loan (Loan)
+import qualified Piece.Db.Db as Db
+import qualified Piece.Gui.Loan.Create as LoanCreate
+import qualified Reactive.Threepenny as R
+import qualified Relude.Unsafe as Unsafe
 
 main :: Int -> IO ()
 main port = do
-    config <- loadConfig
-    Threepenny.startGUI Threepenny.defaultConfig {
-                            jsPort       = Just port
-                           , jsStatic     = Just "./static"
-                           , jsCustomHTML = Just "index.html"
-                           }
-        $ \ window -> mdo
-                env <- runApp env $ app window config
-                return ()
+  config <- Config.load
+  UI.startGUI
+    UI.defaultConfig
+      { UI.jsPort = Just port,
+        UI.jsStatic = Just "./static",
+        UI.jsCustomHTML = Just "index.html"
+      }
+    $ \window -> void $ do
+      liftIO $ mfix (\env -> runApp env $ app window config)
 
+app ::
+  forall m env.
+  (MonadIO m, MonadFix m, Env.WithLoanEnv env m) =>
+  UI.Window ->
+  Config.Config ->
+  m AppEnv
+app window Config.Config {..} = do
+  -- READ
+  databaseLoan <- Db.readJson datastoreLoan :: m (Db.Database Loan)
 
-app :: forall m . (MonadReader Env m, MonadUI m, MonadIO m, MonadFix m)
-    => Window
-    -> Config
-    -> m Env
-app window Config {..} = do
----READ
-    databaseLoan <- readJson datastoreLoan :: m (Database Loan)
+  -- GUI
+  lol <- LoanCreate.setup window
+  content <- liftIO $ UI.runUI window $ UI.string "lola"
+  _ <- liftIO $ UI.runUI window $ UI.getBody window #+ [UI.element content]
 
----BEHAVIOR
-    bDatabaseLoan <- stepper databaseLoan $ Unsafe.head <$> unions []
-    bSelectionUser stepper Nothing $ Unsafe.head <$> unions []
-    bSelectionItem stepper Nothing $ Unsafe.head <$> unions []
-    bSelectionLoan stepper Nothing $ Unsafe.head <$> unions []
-    bFilterUser stepper "" $ Unsafe.head <$> unions []
-    bFilterItem stepper "" $ Unsafe.head <$> unions []
-    bModalState stepper False $ Unsafe.head <$> unions []
+  let tLoanDatabase = LoanCreate.tDatabaseLoan lol
+  let eLoanDatabase = R.rumors tLoanDatabase
 
----ENV
+  -- BEHAVIOR
+  bDatabaseLoan <- R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
+  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
-    let env = Env.Env { Env.loanEnv = {
-                                bDatabaseLoan = bDatabaseLoan,
-                                bSelectionUser = bSelectionUser,
-                                bSelectionItem = bSelectionItem,
-                                bSelectionLoan = bSelectionLoan,
-                                bFilterUser  = bFilterUser,
-                                bFilterItem = bFilterItem,
-                                bModalState = bModalState,
-                        }
-                    }
+  -- ENV
 
---CHANGES
-    liftUI $ onChanges bDatabaseLoan $ writeJson path
+  let env =
+        Env.Env
+          { loanEnv =
+              Env.LoanEnv
+                { bDatabaseLoan = bDatabaseLoan,
+                  bSelectionUser = bSelectionUser,
+                  bSelectionItem = bSelectionItem,
+                  bSelectionLoan = bSelectionLoan,
+                  bFilterUser = bFilterUser,
+                  bFilterItem = bFilterItem,
+                  bFilterLoan = bFilterLoan,
+                  bModalState = bModalState
+                }
+          }
 
-    return env
+  -- CHANGES
+  liftIO $ UI.runUI window $ UI.onChanges bDatabaseLoan $ Db.writeJson datastoreLoan
+
+  return env

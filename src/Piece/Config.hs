@@ -1,5 +1,5 @@
 module Piece.Config
-  ( Config,
+  ( Config (..),
     load,
   )
 where
