@@ -2,6 +2,7 @@ module Piece.App.Monad
   ( App (..),
     AppEnv,
     runApp,
+    runAppAsUI,
   )
 where
 
@@ -24,10 +25,15 @@ newtype App a = App
       Applicative,
       Monad,
       MonadIO,
+      MonadUnliftIO,
       MonadReader AppEnv,
+      UI.MonadUI,
       MonadFix,
-      UI.MonadUI
+      MonadError (ErrorWithSource AppError)
     )
 
 runApp :: AppEnv -> App a -> UI.UI a
 runApp env = CakeSlayer.runApp env . unApp
+
+runAppAsUI :: AppEnv -> App a -> UI.UI (Either (ErrorWithSource AppError) a)
+runAppAsUI env = CakeSlayer.runAppAsUI env . unApp

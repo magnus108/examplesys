@@ -61,6 +61,9 @@ app window Config.Config {..} = do
   let tLoanDatabase = LoanCreate.tDatabaseLoan lol
   let eLoanDatabase = R.rumors tLoanDatabase
 
+  let tLoanFilter = LoanCreate.tLoanFilter lol
+  let eLoanFilter = R.rumors tLoanFilter
+
   -- BEHAVIOR
   bDatabaseLoan <- R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
   bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
@@ -68,7 +71,7 @@ app window Config.Config {..} = do
   bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
   bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
   bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
   bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
   -- ENV
@@ -89,7 +92,7 @@ app window Config.Config {..} = do
           }
 
   -- CHANGES
-  -- liftIO $ UI.runUI window $ UI.onChanges bDatabaseLoan $ Db.writeJson datastoreLoan
+  liftIO $ UI.runUI window $ UI.onChanges bDatabaseLoan $ Db.writeJson datastoreLoan
 
   return env
 

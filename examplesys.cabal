@@ -11,6 +11,7 @@ common common-all
         , relude
         , aeson
         , unliftio-core
+        , unliftio
         , containers
         , threepenny-gui
     other-modules:

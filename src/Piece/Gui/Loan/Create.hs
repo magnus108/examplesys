@@ -3,6 +3,7 @@
 module Piece.Gui.Loan.Create
   ( setup,
     tDatabaseLoan,
+    tLoanFilter,
     Create,
   )
 where
@@ -41,7 +42,7 @@ displayLoan = do
   show <- showLoan
   return $ (UI.string .) <$> show
 
-setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m, MonadIO m) => UI.Window -> m Create
+setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => UI.Window -> m Create
 setup window = mdo
   listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
   filterLoan <- UI.liftUI $ Widgets.entry (Env.bFilterLoan loanEnv)
