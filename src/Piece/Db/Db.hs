@@ -1,11 +1,15 @@
 module Piece.Db.Db
   ( Database,
     DatabaseKey,
-    emptydb,
+    elems,
+    create,
+    empty,
     readJson,
     writeJson,
     lookup,
     keys,
+    toList,
+    update,
   )
 where
 
@@ -13,6 +17,7 @@ import Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Map as M
 import qualified Relude.Unsafe as Unsafe
+import Prelude hiding (empty, toList)
 
 type DatabaseKey = Int
 
@@ -20,8 +25,8 @@ data Database a = Database {nextKey :: !Int, db :: M.Map DatabaseKey a}
   deriving stock (Show, Generic)
   deriving (FromJSON, ToJSON)
 
-emptydb :: Database a
-emptydb = Database 0 mempty
+empty :: Database a
+empty = Database 0 mempty
 
 keys :: Database a -> [DatabaseKey]
 keys = M.keys . db
@@ -42,7 +47,7 @@ delete :: DatabaseKey -> Database a -> Database a
 delete key (Database newkey db) = Database newkey $ M.delete key db
 
 lookup :: DatabaseKey -> Database a -> Maybe a
-lookup key (Database _ db) = M.lookup key db
+lookup key x = M.lookup key (db x)
 
 readJson :: (MonadIO m, FromJSON a) => FilePath -> m a
 readJson fp = liftIO $ Unsafe.fromJust . decode . fromStrict <$> BS.readFile fp

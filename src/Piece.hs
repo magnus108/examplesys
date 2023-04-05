@@ -1,15 +1,22 @@
+{-# LANGUAGE RecursiveDo #-}
+
 module Piece
   ( main,
   )
 where
 
 import Control.Monad.Fix
-import Graphics.UI.Threepenny.Core ((#+))
+import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import qualified Data.ByteString as UI
+import Graphics.UI.Threepenny.Core ((#), (#+))
 import qualified Graphics.UI.Threepenny.Core as UI
+import qualified Graphics.UI.Threepenny.Elements as Elements
+import qualified Graphics.UI.Threepenny.Events as Events
+import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
 import Piece.App.Monad (AppEnv, runApp)
 import qualified Piece.Config as Config
-import Piece.Core.Loan (Loan)
+import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Reactive.Threepenny as R
@@ -25,22 +32,31 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ do
-      liftIO $ mfix (\env -> runApp env $ app window config)
+      mfix (\env -> runApp env $ app window config)
 
 app ::
   forall m env.
-  (MonadIO m, MonadFix m, Env.WithLoanEnv env m) =>
+  (UI.MonadUI m, MonadIO m, MonadFix m, Env.WithLoanEnv env m) =>
   UI.Window ->
   Config.Config ->
   m AppEnv
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Db.readJson datastoreLoan :: m (Db.Database Loan)
+  databaseLoan <- Db.readJson datastoreLoan :: m (Db.Database Loan.Loan)
 
   -- GUI
   lol <- LoanCreate.setup window
   content <- liftIO $ UI.runUI window $ UI.string "lola"
-  _ <- liftIO $ UI.runUI window $ UI.getBody window #+ [UI.element content]
+  _ <- liftIO $ UI.runUI window $ mdo
+    createBtn <- Elements.button #+ [UI.string "Creater"]
+    bDatabase <-
+      R.stepper databaseLoan $
+        Unsafe.head
+          <$> R.unions
+            [ Db.create (Loan.Loan "bob") <$> bDatabase R.<@ (Events.click createBtn)
+            ] -- eLoanDatabase]
+    gg <- Elements.div # UI.sink items ((\x -> fmap (UI.string . Loan.name) (Db.elems x)) <$> bDatabase)
+    UI.getBody window #+ [UI.element createBtn, UI.element content, UI.element gg, UI.element lol]
 
   let tLoanDatabase = LoanCreate.tDatabaseLoan lol
   let eLoanDatabase = R.rumors tLoanDatabase
@@ -73,6 +89,9 @@ app window Config.Config {..} = do
           }
 
   -- CHANGES
-  liftIO $ UI.runUI window $ UI.onChanges bDatabaseLoan $ Db.writeJson datastoreLoan
+  -- liftIO $ UI.runUI window $ UI.onChanges bDatabaseLoan $ Db.writeJson datastoreLoan
 
   return env
+
+items = UI.mkWriteAttr $ \i x -> void $ do
+  return x # UI.set UI.children [] #+ map (\i -> Elements.div #+ [i]) i

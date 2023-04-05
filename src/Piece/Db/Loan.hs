@@ -3,6 +3,7 @@ module Piece.Db.Loan
   )
 where
 
+import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
@@ -14,4 +15,4 @@ import qualified Reactive.Threepenny as R
 lookup :: (Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Loan.Loan))
 lookup = do
   loanEnv <- Has.grab @Env.LoanEnv
-  return $ flip Db.lookup <$> Env.bDatabaseLoan loanEnv
+  return $ flip Db.lookup <$> (Env.bDatabaseLoan loanEnv)

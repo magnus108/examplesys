@@ -8,6 +8,7 @@ module Piece.Gui.Loan.Create
 where
 
 import Control.Monad.Fix
+import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Graphics.UI.Threepenny.Core ((#), (#+))
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as Elements
@@ -40,12 +41,11 @@ displayLoan = do
   show <- showLoan
   return $ (UI.string .) <$> show
 
-setup :: (Env.WithLoanEnv env m, MonadFix m, MonadIO m) => UI.Window -> m Create
+setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m, MonadIO m) => UI.Window -> m Create
 setup window = mdo
-  listBoxLoan <- liftIO $ UI.runUI window $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
-  filterLoan <- liftIO $ UI.runUI window $ Widgets.entry (Env.bFilterUser loanEnv)
-
-  view <- liftIO $ UI.runUI window $ Elements.div # UI.set UI.children [UI.getElement filterLoan, UI.getElement listBoxLoan]
+  listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
+  filterLoan <- UI.liftUI $ Widgets.entry (Env.bFilterLoan loanEnv)
+  view <- UI.liftUI $ Elements.div #+ [UI.element filterLoan, UI.element listBoxLoan]
 
   let tLoanSelection = Widgets.userSelection listBoxLoan
   let tLoanFilter = Widgets.userText filterLoan
@@ -54,7 +54,6 @@ setup window = mdo
 
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
-
   bShowLoan <- showLoan
   bDisplayLoan <- displayLoan
 

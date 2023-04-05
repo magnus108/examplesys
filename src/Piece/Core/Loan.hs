@@ -1,5 +1,5 @@
 module Piece.Core.Loan
-  ( Loan,
+  ( Loan (..),
     name,
   )
 where

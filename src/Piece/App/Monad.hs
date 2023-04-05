@@ -2,13 +2,13 @@ module Piece.App.Monad
   ( App (..),
     AppEnv,
     runApp,
-    runAppAsIO,
   )
 where
 
 import Control.Monad.Except (MonadError)
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.App.Env (Env)
 import Piece.App.Error (AppError)
 import Piece.CakeSlayer (ErrorWithSource)
@@ -24,14 +24,10 @@ newtype App a = App
       Applicative,
       Monad,
       MonadIO,
-      MonadUnliftIO,
       MonadReader AppEnv,
       MonadFix,
-      MonadError (ErrorWithSource AppError)
+      UI.MonadUI
     )
 
-runApp :: AppEnv -> App a -> IO a
+runApp :: AppEnv -> App a -> UI.UI a
 runApp env = CakeSlayer.runApp env . unApp
-
-runAppAsIO :: AppEnv -> App a -> IO (Either (ErrorWithSource AppError) a)
-runAppAsIO env = CakeSlayer.runAppAsIO env . unApp
