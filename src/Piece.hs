@@ -36,15 +36,16 @@ main port = do
     $ \window -> void $ do
       mfix (\env -> Monad.runApp env $ app window config)
 
+type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
+
 app ::
-  forall m env.
-  (UI.MonadUI m, Change.MonadChanges m, MonadIO m, MonadFix m, Env.WithLoanEnv env m) =>
+  (UI.MonadUI m, WithDefaults env m, MonadIO m, MonadFix m) =>
   UI.Window ->
   Config.Config ->
   m Monad.AppEnv
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Db.readJson datastoreLoan :: m (Db.Database Loan.Loan)
+  databaseLoan <- Change.read datastoreLoan
 
   -- GUI
   lol <- LoanCreate.setup window
