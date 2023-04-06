@@ -23,6 +23,7 @@ type WithLoanEnv env m = (MonadReader env m, Has LoanEnv env)
 
 data LoanEnv = LoanEnv
   { bDatabaseLoan :: R.Behavior (Database Loan),
+    eDatabaseLoan :: R.Event [Database Loan],
     bSelectionUser :: R.Behavior (Maybe DatabaseKey),
     bSelectionItem :: R.Behavior (Maybe DatabaseKey),
     bSelectionLoan :: R.Behavior (Maybe DatabaseKey),

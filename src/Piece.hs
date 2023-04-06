@@ -14,10 +14,12 @@ import qualified Graphics.UI.Threepenny.Elements as Elements
 import qualified Graphics.UI.Threepenny.Events as Events
 import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
-import Piece.App.Monad (AppEnv, runApp)
+import qualified Piece.App.Monad as Monad
+import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
+import qualified Piece.Effects.Change as Change
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -32,14 +34,14 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ do
-      mfix (\env -> runApp env $ app window config)
+      mfix (\env -> Monad.runApp env $ app window config)
 
 app ::
   forall m env.
-  (UI.MonadUI m, MonadIO m, MonadFix m, Env.WithLoanEnv env m) =>
+  (UI.MonadUI m, Change.MonadChanges m, MonadIO m, MonadFix m, Env.WithLoanEnv env m) =>
   UI.Window ->
   Config.Config ->
-  m AppEnv
+  m Monad.AppEnv
 app window Config.Config {..} = do
   -- READ
   databaseLoan <- Db.readJson datastoreLoan :: m (Db.Database Loan.Loan)
@@ -64,8 +66,11 @@ app window Config.Config {..} = do
   let tLoanFilter = LoanCreate.tLoanFilter lol
   let eLoanFilter = R.rumors tLoanFilter
 
+  -- EVENTS
+  let eDatabaseLoan = R.unions [eLoanDatabase]
+
   -- BEHAVIOR
-  bDatabaseLoan <- R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
+  bDatabaseLoan <- R.stepper databaseLoan $ Unsafe.head <$> eDatabaseLoan
   bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
   bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
   bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
@@ -81,6 +86,7 @@ app window Config.Config {..} = do
           { loanEnv =
               Env.LoanEnv
                 { bDatabaseLoan = bDatabaseLoan,
+                  eDatabaseLoan = eDatabaseLoan,
                   bSelectionUser = bSelectionUser,
                   bSelectionItem = bSelectionItem,
                   bSelectionLoan = bSelectionLoan,
@@ -92,7 +98,7 @@ app window Config.Config {..} = do
           }
 
   -- CHANGES
-  liftIO $ UI.runUI window $ UI.onChanges bDatabaseLoan $ Db.writeJson datastoreLoan
+  _ <- Change.listen datastoreLoan
 
   return env
 
