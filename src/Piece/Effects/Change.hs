@@ -1,8 +1,6 @@
 module Piece.Effects.Change
   ( MonadChanges,
     listen,
-    MonadRead,
-    read,
   )
 where
 
@@ -17,27 +15,14 @@ import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 
 class Monad m => MonadChanges m where
-  listen :: String -> m (m ())
+  listen :: String -> m ()
 
 instance MonadChanges Monad.App where
   listen = listenImpl
   {-# INLINE listen #-}
 
-listenImpl :: (MonadIO m, Env.WithLoanEnv env m) => String -> m (m ())
+listenImpl :: (MonadIO m, Env.WithLoanEnv env m) => String -> m ()
 listenImpl datastoreLoan = do
-  -- loanEnv <- Has.grab @Env.LoanEnv
-  -- let eDatabaseLoan = Env.eDatabaseLoan loanEnv
-  unregister <- liftIO $ return () -- R.register eDatabaseLoan $ Db.writeJson datastoreLoan
-  return $ liftIO unregister
-
-class Monad m => MonadRead m where
-  read :: String -> m (Db.Database Loan.Loan)
-
-instance MonadRead Monad.App where
-  read = readImpl
-  {-# INLINE read #-}
-
-readImpl :: (MonadIO m) => String -> m (Db.Database Loan.Loan)
-readImpl datastoreLoan = do
-  databaseLoan <- Db.readJson datastoreLoan
-  return databaseLoan
+  loanEnv <- Has.grab @Env.LoanEnv
+  let eDatabaseLoan = Env.eDatabaseLoan loanEnv
+  liftIO $ R.register eDatabaseLoan $ Db.writeJson datastoreLoan
