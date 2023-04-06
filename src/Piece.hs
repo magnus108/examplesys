@@ -81,7 +81,6 @@ app window Config.Config {..} = do
   bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
   -- ENV
-
   let env =
         Env.Env
           { loanEnv =
