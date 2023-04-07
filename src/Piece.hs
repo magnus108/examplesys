@@ -5,10 +5,9 @@ module Piece
   )
 where
 
-import Control.Concurrent
-import qualified Control.Concurrent.Chan as Chan
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import qualified Data.ByteString as UI
 import Graphics.UI.Threepenny.Core ((#), (#+))
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as Elements
@@ -28,55 +27,39 @@ import qualified Relude.Unsafe as Unsafe
 main :: Int -> IO ()
 main port = do
   config <- Config.load
-  messages <- Chan.newChan
   UI.startGUI
     UI.defaultConfig
       { UI.jsPort = Just port,
         UI.jsStatic = Just "./static",
-        UI.jsCustomHTML = Just "index.html",
-        UI.jsCallBufferMode = UI.NoBuffering
+        UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ do
-      liftIO $ do
-        -- READ
-        databaseLoan <- Db.readJson (Config.datastoreLoan config)
-        mfix (\env -> Monad.runApp messages env $ app databaseLoan messages)
-        return ()
-
-      UI.liftUI $ mdo
-        content <- UI.string "lola"
-        createBtn <- Elements.button #+ [UI.string "Creater"]
-        bDatabase <-
-          R.stepper (Db.empty) $
-            Unsafe.head
-              <$> R.unions
-                [ Db.create (Loan.Loan "bob") <$> bDatabase R.<@ (Events.click createBtn)
-                ] -- eLoanDatabase]
-        gg <- Elements.div # UI.sink items ((\x -> fmap (UI.string . Loan.name) (Db.elems x)) <$> bDatabase)
-        UI.getBody window #+ [UI.element createBtn, UI.element content, UI.element gg]
-
-      messageReceiver <- liftIO $ forkIO $ receiveMessages window messages
-
-      UI.on UI.disconnect window $ const $ liftIO $ do
-        killThread messageReceiver
-
-receiveMessages w msgs = do
-  messages <- Chan.getChanContents msgs
-  forM_ messages $ \msg -> do
-    UI.runUI w $ do
-      msg
-      UI.flushCallBuffer
+      mfix (\env -> Monad.runApp env $ app window config)
 
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
 app ::
   (UI.MonadUI m, WithDefaults env m, MonadIO m, MonadFix m) =>
-  Db.Database Loan.Loan ->
-  Chan.Chan (UI.UI ()) ->
+  UI.Window ->
+  Config.Config ->
   m Monad.AppEnv
-app databaseLoan messages = do
+app window Config.Config {..} = do
+  -- READ
+  databaseLoan <- Change.read datastoreLoan
+
   -- GUI
-  lol <- LoanCreate.setup
+  lol <- LoanCreate.setup window
+  content <- liftIO $ UI.runUI window $ UI.string "lola"
+  _ <- liftIO $ UI.runUI window $ mdo
+    createBtn <- Elements.button #+ [UI.string "Creater"]
+    bDatabase <-
+      R.stepper databaseLoan $
+        Unsafe.head
+          <$> R.unions
+            [ Db.create (Loan.Loan "bob") <$> bDatabase R.<@ (Events.click createBtn)
+            ] -- eLoanDatabase]
+    gg <- Elements.div # UI.sink items ((\x -> fmap (UI.string . Loan.name) (Db.elems x)) <$> bDatabase)
+    UI.getBody window #+ [UI.element createBtn, UI.element content, UI.element gg, UI.element lol]
 
   let tLoanDatabase = LoanCreate.tDatabaseLoan lol
   let eLoanDatabase = R.rumors tLoanDatabase
@@ -111,12 +94,11 @@ app databaseLoan messages = do
                   bFilterItem = bFilterItem,
                   bFilterLoan = bFilterLoan,
                   bModalState = bModalState
-                },
-            chan = messages
+                }
           }
 
   -- CHANGES
-  -- _ <- Change.listen datastoreLoan
+  _ <- Change.listen datastoreLoan
 
   return env
 

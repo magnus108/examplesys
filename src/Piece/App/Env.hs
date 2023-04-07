@@ -7,8 +7,6 @@ module Piece.App.Env
   )
 where
 
-import qualified Control.Concurrent.Chan as Chan
-import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.CakeSlayer.Has (Field (..), Has)
 import Piece.Core.Item (Item)
 import Piece.Core.Loan (Loan)
@@ -17,11 +15,9 @@ import Piece.Db.Db (Database, DatabaseKey)
 import qualified Reactive.Threepenny as R
 
 data Env (m :: Type -> Type) = Env
-  { loanEnv :: LoanEnv,
-    chan :: Chan.Chan (UI.UI ())
+  { loanEnv :: LoanEnv
   }
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
-  deriving (Has (Chan.Chan (UI.UI ()))) via Field "chan" (Env m)
 
 type WithLoanEnv env m = (MonadReader env m, Has LoanEnv env)
 
