@@ -53,8 +53,8 @@ bListBox bFilterLoan = do
       <*> bShowLoan
       <*> bDatabaseLoan
 
-setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => UI.Window -> m Create
-setup window = mdo
+setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => m Create
+setup = mdo
   listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
   filterLoan <- UI.liftUI $ Widgets.entry (Env.bFilterLoan loanEnv)
   view <- UI.liftUI $ Elements.div #+ [UI.element filterLoan, UI.element listBoxLoan]

@@ -2,18 +2,20 @@ module Piece.App.Monad
   ( App (..),
     AppEnv,
     runApp,
-    runAppAsUI,
+    runAppAsIO,
   )
 where
 
+import qualified Control.Concurrent.Chan as Chan
 import Control.Monad.Except (MonadError)
 import Control.Monad.Fix
-import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.App.Env (Env)
 import Piece.App.Error (AppError)
-import Piece.CakeSlayer (ErrorWithSource)
+import Piece.CakeSlayer.Error (ErrorWithSource)
+import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
+import UnliftIO (MonadUnliftIO, withRunInIO)
 
 type AppEnv = Env App
 
@@ -27,13 +29,24 @@ newtype App a = App
       MonadIO,
       MonadUnliftIO,
       MonadReader AppEnv,
-      UI.MonadUI,
       MonadFix,
       MonadError (ErrorWithSource AppError)
     )
 
-runApp :: AppEnv -> App a -> UI.UI a
+instance UI.MonadUI App where
+  liftUI ui = do
+    chan <- Has.grab @(Chan.Chan (UI.UI ()))
+    traceShowM "lol"
+    liftIO $ do
+      traceShowM "lola"
+      Chan.writeChan chan $ do
+        ui
+        return ()
+    traceShowM "lola2"
+    liftIO mzero
+
+runApp :: AppEnv -> App a -> IO a
 runApp env = CakeSlayer.runApp env . unApp
 
-runAppAsUI :: AppEnv -> App a -> UI.UI (Either (ErrorWithSource AppError) a)
-runAppAsUI env = CakeSlayer.runAppAsUI env . unApp
+runAppAsIO :: AppEnv -> App a -> IO (Either (ErrorWithSource AppError) a)
+runAppAsIO env = CakeSlayer.runAppAsIO env . unApp
