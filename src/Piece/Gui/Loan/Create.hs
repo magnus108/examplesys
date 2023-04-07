@@ -42,6 +42,17 @@ displayLoan = do
   show <- showLoan
   return $ (UI.string .) <$> show
 
+bListBox :: (Env.WithLoanEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
+bListBox bFilterLoan = do
+  loanEnv <- Has.grab @Env.LoanEnv
+  let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+  bShowLoan <- showLoan
+  return $
+    (\p display -> filter (p . display) . Db.keys)
+      <$> bFilterLoan
+      <*> bShowLoan
+      <*> bDatabaseLoan
+
 setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => UI.Window -> m Create
 setup window = mdo
   listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
@@ -58,12 +69,7 @@ setup window = mdo
   bShowLoan <- showLoan
   bDisplayLoan <- displayLoan
 
-  let bListBoxLoans :: R.Behavior [Db.DatabaseKey]
-      bListBoxLoans =
-        (\p display -> filter (p . display) . Db.keys)
-          <$> bFilterLoan
-          <*> bShowLoan
-          <*> bDatabaseLoan
+  bListBoxLoans <- bListBox bFilterLoan
 
   let tDatabaseLoan = R.tidings bDatabaseLoan $ Unsafe.head <$> R.unions []
 
