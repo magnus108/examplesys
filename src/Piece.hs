@@ -5,7 +5,7 @@ module Piece
   )
 where
 
-import Control.Concurrent (forkIO, killThread)
+import Control.Concurrent
 import qualified Control.Concurrent.Chan as Chan
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
@@ -37,17 +37,10 @@ main port = do
         UI.jsCallBufferMode = UI.NoBuffering
       }
     $ \window -> void $ do
-      loanEnv <- newEmptyMVar
-      chan <- newMVar messages
       liftIO $ do
-        let env =
-              Env.Env
-                { loanEnv = loanEnv,
-                  chan = chan
-                }
         -- READ
         databaseLoan <- Db.readJson (Config.datastoreLoan config)
-        Monad.runApp env $ app databaseLoan
+        mfix (\env -> Monad.runApp messages env $ app databaseLoan messages)
         return ()
 
       UI.liftUI $ mdo
@@ -67,7 +60,6 @@ main port = do
       UI.on UI.disconnect window $ const $ liftIO $ do
         killThread messageReceiver
 
--- ligegyldigt
 receiveMessages w msgs = do
   messages <- Chan.getChanContents msgs
   forM_ messages $ \msg -> do
@@ -80,8 +72,9 @@ type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLo
 app ::
   (UI.MonadUI m, WithDefaults env m, MonadIO m, MonadFix m) =>
   Db.Database Loan.Loan ->
-  m ()
-app databaseLoan = do
+  Chan.Chan (UI.UI ()) ->
+  m Monad.AppEnv
+app databaseLoan messages = do
   -- GUI
   lol <- LoanCreate.setup
 
@@ -105,25 +98,27 @@ app databaseLoan = do
   bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
   -- ENV
-  loanEnv <- Has.grab @(MVar (Env.LoanEnv))
-  liftIO $
-    putMVar loanEnv $
-      Env.LoanEnv
-        { bDatabaseLoan = bDatabaseLoan,
-          eDatabaseLoan = eDatabaseLoan,
-          bSelectionUser = bSelectionUser,
-          bSelectionItem = bSelectionItem,
-          bSelectionLoan = bSelectionLoan,
-          bFilterUser = bFilterUser,
-          bFilterItem = bFilterItem,
-          bFilterLoan = bFilterLoan,
-          bModalState = bModalState
-        }
+  let env =
+        Env.Env
+          { loanEnv =
+              Env.LoanEnv
+                { bDatabaseLoan = bDatabaseLoan,
+                  eDatabaseLoan = eDatabaseLoan,
+                  bSelectionUser = bSelectionUser,
+                  bSelectionItem = bSelectionItem,
+                  bSelectionLoan = bSelectionLoan,
+                  bFilterUser = bFilterUser,
+                  bFilterItem = bFilterItem,
+                  bFilterLoan = bFilterLoan,
+                  bModalState = bModalState
+                },
+            chan = messages
+          }
 
   -- CHANGES
   -- _ <- Change.listen datastoreLoan
 
-  return ()
+  return env
 
 items = UI.mkWriteAttr $ \i x -> void $ do
   return x # UI.set UI.children [] #+ map (\i -> Elements.div #+ [i]) i

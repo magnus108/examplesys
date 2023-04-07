@@ -35,13 +35,15 @@ newtype App a = App
 
 instance UI.MonadUI App where
   liftUI ui = do
-    chan <- Has.grab @(MVar (Chan.Chan (UI.UI ())))
-    x <- liftIO $ readMVar chan
+    chan <- Has.grab @(Chan.Chan (UI.UI ()))
+    traceShowM "lol"
     liftIO $ do
-      Chan.writeChan x $ do
+      traceShowM "lola"
+      Chan.writeChan chan $ do
         ui
         return ()
-    liftIO empty
+    traceShowM "lola2"
+    liftIO mzero
 
 runApp :: AppEnv -> App a -> IO a
 runApp env = CakeSlayer.runApp env . unApp
