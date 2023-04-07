@@ -32,19 +32,20 @@ data Create = Create
 instance UI.Widget Create where
   getElement = view
 
-showLoan :: (Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> String))
+showLoan :: (MonadIO m, Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> String))
 showLoan = do
   bLookup <- DbLoan.lookup
   return $ (maybe "" Loan.name .) <$> bLookup
 
-displayLoan :: (Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
+displayLoan :: (MonadIO m, Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayLoan = do
   show <- showLoan
   return $ (UI.string .) <$> show
 
-bListBox :: (Env.WithLoanEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
+bListBox :: (MonadIO m, Env.WithLoanEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
 bListBox bFilterLoan = do
-  loanEnv <- Has.grab @Env.LoanEnv
+  mLoanEnv <- Has.grab @(MVar Env.LoanEnv)
+  loanEnv <- liftIO $ readMVar mLoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
   bShowLoan <- showLoan
   return $
@@ -53,9 +54,11 @@ bListBox bFilterLoan = do
       <*> bShowLoan
       <*> bDatabaseLoan
 
-setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => m Create
+setup :: (MonadIO m, UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => m Create
 setup = mdo
+  traceShowM "fuck"
   listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
+  traceShowM "ackcofuck"
   filterLoan <- UI.liftUI $ Widgets.entry (Env.bFilterLoan loanEnv)
   view <- UI.liftUI $ Elements.div #+ [UI.element filterLoan, UI.element listBoxLoan]
 
@@ -64,7 +67,8 @@ setup = mdo
       tFilterLoan = isPrefixOf <$> tLoanFilter
       bFilterLoan = R.facts tFilterLoan
 
-  loanEnv <- Has.grab @Env.LoanEnv
+  mLoanEnv <- Has.grab @(MVar Env.LoanEnv)
+  loanEnv <- readMVar mLoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
   bShowLoan <- showLoan
   bDisplayLoan <- displayLoan

@@ -25,7 +25,8 @@ instance MonadChanges Monad.App where
 
 listenImpl :: (MonadIO m, Env.WithLoanEnv env m) => String -> m (m ())
 listenImpl datastoreLoan = do
-  loanEnv <- Has.grab @Env.LoanEnv
+  mLoanEnv <- Has.grab @(MVar Env.LoanEnv)
+  loanEnv <- readMVar mLoanEnv
   let eDatabaseLoan = Env.eDatabaseLoan loanEnv
   unregister <- liftIO $ R.register eDatabaseLoan $ Db.writeJson datastoreLoan
   return $ liftIO unregister

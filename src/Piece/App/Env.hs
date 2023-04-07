@@ -17,13 +17,13 @@ import Piece.Db.Db (Database, DatabaseKey)
 import qualified Reactive.Threepenny as R
 
 data Env (m :: Type -> Type) = Env
-  { loanEnv :: LoanEnv,
-    chan :: Chan.Chan (UI.UI ())
+  { loanEnv :: MVar LoanEnv,
+    chan :: MVar (Chan.Chan (UI.UI ()))
   }
-  deriving (Has LoanEnv) via Field "loanEnv" (Env m)
-  deriving (Has (Chan.Chan (UI.UI ()))) via Field "chan" (Env m)
+  deriving (Has (MVar LoanEnv)) via Field "loanEnv" (Env m)
+  deriving (Has (MVar (Chan.Chan (UI.UI ())))) via Field "chan" (Env m)
 
-type WithLoanEnv env m = (MonadReader env m, Has LoanEnv env)
+type WithLoanEnv env m = (MonadReader env m, Has (MVar LoanEnv) env)
 
 data LoanEnv = LoanEnv
   { bDatabaseLoan :: R.Behavior (Database Loan),
