@@ -14,7 +14,6 @@ import qualified Graphics.UI.Threepenny.Elements as Elements
 import qualified Graphics.UI.Threepenny.Events as Events
 import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
-import Piece.App.Monad (withRunInUI)
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
@@ -35,20 +34,7 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ do
-      let enva =
-            Env.Env
-              { loanEnv = undefined,
-                window = window
-              }
-      liftIO $
-        mfix
-          ( \env -> Monad.runApp enva $ withRunInUI $ \runInUI -> do
-              content <- UI.string "lola"
-              UI.getBody window #+ [UI.element content]
-
-              _ <- runInUI $ Change.listen "lol"
-              return env
-          )
+      mfix (\env -> Monad.runApp env $ app window config)
 
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
@@ -62,10 +48,9 @@ app window Config.Config {..} = do
   databaseLoan <- Change.read datastoreLoan
 
   -- GUI
-  traceShowM "fucekr"
-  content <- UI.liftUI $ UI.string "lola"
-  traceShowM "fucekrsssss"
-  _ <- UI.liftUI $ mdo
+  lol <- LoanCreate.setup window
+  content <- liftIO $ UI.runUI window $ UI.string "lola"
+  _ <- liftIO $ UI.runUI window $ mdo
     createBtn <- Elements.button #+ [UI.string "Creater"]
     bDatabase <-
       R.stepper databaseLoan $
@@ -74,10 +59,16 @@ app window Config.Config {..} = do
             [ Db.create (Loan.Loan "bob") <$> bDatabase R.<@ (Events.click createBtn)
             ] -- eLoanDatabase]
     gg <- Elements.div # UI.sink items ((\x -> fmap (UI.string . Loan.name) (Db.elems x)) <$> bDatabase)
-    UI.getBody window #+ [UI.element createBtn, UI.element content, UI.element gg]
+    UI.getBody window #+ [UI.element createBtn, UI.element content, UI.element gg, UI.element lol]
+
+  let tLoanDatabase = LoanCreate.tDatabaseLoan lol
+  let eLoanDatabase = R.rumors tLoanDatabase
+
+  let tLoanFilter = LoanCreate.tLoanFilter lol
+  let eLoanFilter = R.rumors tLoanFilter
 
   -- EVENTS
-  let eDatabaseLoan = R.unions []
+  let eDatabaseLoan = R.unions [eLoanDatabase]
 
   -- BEHAVIOR
   bDatabaseLoan <- R.stepper databaseLoan $ Unsafe.head <$> eDatabaseLoan
@@ -86,7 +77,7 @@ app window Config.Config {..} = do
   bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
   bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
   bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
   bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
   -- ENV
@@ -103,12 +94,11 @@ app window Config.Config {..} = do
                   bFilterItem = bFilterItem,
                   bFilterLoan = bFilterLoan,
                   bModalState = bModalState
-                },
-            window = window
+                }
           }
 
   -- CHANGES
-  -- _ <- Change.listen datastoreLoan
+  _ <- Change.listen datastoreLoan
 
   return env
 
