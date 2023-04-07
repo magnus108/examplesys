@@ -4,6 +4,7 @@ module Main
 where
 
 import qualified Piece.Core.Item.Tests
+import qualified Piece.Db.Loan.Tests
 import Test.Tasty
 import Test.Tasty.HUnit
 
@@ -12,5 +13,6 @@ main =
   defaultMain $
     testGroup
       "Tests"
-      [ Piece.Core.Item.Tests.tests
+      [ Piece.Core.Item.Tests.tests,
+        Piece.Db.Loan.Tests.tests
       ]

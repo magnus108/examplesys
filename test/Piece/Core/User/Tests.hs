@@ -1,4 +1,4 @@
-module Piece.Core.Item.Tests
+module Piece.Core.User.Tests
   ( tests,
   )
 where
@@ -8,7 +8,7 @@ import TestSuite.Util
 
 tests :: TestTree
 tests =
-  testGroup "Piece.Core.Item.Tests" $
+  testGroup "Piece.Core.User.Tests" $
     concat
       [ fromAssertions
           ""

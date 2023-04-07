@@ -10,8 +10,8 @@ common common-all
         , transformers
         , relude
         , aeson
-        , unliftio-core
         , unliftio
+        , unliftio-core
         , containers
         , threepenny-gui
     other-modules:
@@ -28,7 +28,7 @@ common common-all
         Piece.Core.Loan
         Piece.Core.User
         Piece.Db.Db
-        Piece.Db.Loan 
+        Piece.Db.Loan
         Piece.Gui.Loan.Create
 
     mixins:
