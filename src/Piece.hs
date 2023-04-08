@@ -36,9 +36,12 @@ main port = do
       }
     $ \window -> void $ do
       traceShowM "a"
-      content <- liftIO $ mdo
-        (env, content) <- Monad.runApp env $ app window config
-        return content
+      (env, content) <- liftIO $ mfix (\(~(env, content)) -> Monad.runApp env $ app window config)
+
+      -- CHANGES
+      -- listen <- liftIO $ Monad.runApp env $ do
+      -- Change.listen (Config.datastoreLoan config)
+
       traceShowM "b"
       content2 <- UI.liftUI $ UI.string "lola"
       content3 <- UI.liftUI $ UI.string "lola2"
@@ -57,14 +60,11 @@ app window Config.Config {..} = do
 
   -- GUI
   traceShowM "1"
-  lol <- LoanCreate.setup window
-  traceShowM "3"
-  content2 <- UI.liftUI $ UI.string "lola"
+  lol <- LoanCreate.setup
   traceShowM "2"
+  content2 <- UI.liftUI $ UI.string "lola"
   content <- UI.liftUI $ mdo
-    traceShowM "3"
     createBtn <- Elements.button #+ [UI.string "Creater"]
-    traceShowM "5"
     bDatabase <-
       R.stepper databaseLoan $
         Unsafe.head
@@ -72,36 +72,27 @@ app window Config.Config {..} = do
             [ Db.create (Loan.Loan "bob") <$> bDatabase R.<@ (Events.click createBtn)
             ] -- eLoanDatabase]
     gg <- Elements.div # UI.sink items ((\x -> fmap (UI.string . Loan.name) (Db.elems x)) <$> bDatabase)
-    traceShowM "115"
     UI.getBody window #+ [UI.element createBtn, UI.element gg, UI.element content2]
-  traceShowM "4"
+
+  let eCreate = LoanCreate.eCreate lol
 
   let tLoanDatabase = LoanCreate.tDatabaseLoan lol
   let eLoanDatabase = R.rumors tLoanDatabase
 
-  traceShowM "8"
   let tLoanFilter = LoanCreate.tLoanFilter lol
   let eLoanFilter = R.rumors tLoanFilter
 
   -- EVENTS
 
   -- BEHAVIOR
-  traceShowM "7"
   bDatabaseLoan <- UI.liftUI $ R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
-  traceShowM "9"
   bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  traceShowM "14"
   bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  traceShowM "13"
   bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
   bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  traceShowM "12"
   bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  traceShowM "11"
-  bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
-  traceShowM "10"
+  bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
   bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
-  traceShowM "6"
 
   -- ENV
   let env =
@@ -120,10 +111,6 @@ app window Config.Config {..} = do
             window = window
           }
 
-  -- CHANGES
-  _ <- Change.listen datastoreLoan
-
-  traceShowM "5"
   return (env, lol)
 
 items = UI.mkWriteAttr $ \i x -> void $ do

@@ -4,12 +4,12 @@ module Piece.Gui.Loan.Create
   ( setup,
     tDatabaseLoan,
     tLoanFilter,
+    eCreate,
     Create,
   )
 where
 
 import Control.Monad.Fix
-import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import Graphics.UI.Threepenny.Core ((#), (#+))
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as Elements
@@ -20,6 +20,7 @@ import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Loan as DbLoan
+import Reactive.Threepenny ((<@))
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 
@@ -27,7 +28,8 @@ data Create = Create
   { view :: UI.Element,
     tDatabaseLoan :: R.Tidings (Db.Database Loan.Loan),
     tLoanSelection :: R.Tidings (Maybe Db.DatabaseKey),
-    tLoanFilter :: R.Tidings String
+    tLoanFilter :: R.Tidings String,
+    eCreate :: R.Event ()
   }
 
 instance UI.Widget Create where
@@ -54,27 +56,30 @@ bListBox bFilterLoan = do
       <*> bShowLoan
       <*> bDatabaseLoan
 
-setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => UI.Window -> m Create
-setup window = mdo
+setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => m Create
+setup = mdo
+  traceShowM "32"
   listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
+  traceShowM "12"
   filterLoan <- entry (Env.bFilterLoan loanEnv)
   bob <- UI.liftUI $ UI.string "bob"
-  view <- UI.liftUI $ Elements.div # UI.set UI.children [bob, UI.getElement listBoxLoan, UI.getElement filterLoan]
+  btn <- UI.liftUI $ Elements.button # UI.set UI.children [bob]
+  view <- UI.liftUI $ Elements.div # UI.set UI.children [UI.getElement listBoxLoan, UI.getElement filterLoan, btn]
 
   let tLoanSelection = Widgets.userSelection listBoxLoan
   let tLoanFilter = userText filterLoan
       tFilterLoan = isPrefixOf <$> tLoanFilter
       bFilterLoan = R.facts tFilterLoan
 
+  let eCreate = Events.click btn
+
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
-  bShowLoan <- showLoan
   bDisplayLoan <- displayLoan
 
   bListBoxLoans <- bListBox bFilterLoan
 
-  let tDatabaseLoan = R.tidings bDatabaseLoan $ Unsafe.head <$> R.unions []
-  traceShowM "WTF"
+  let tDatabaseLoan = R.tidings bDatabaseLoan $ Unsafe.head <$> R.unions [Db.create (Loan.Loan "dadda") <$> bDatabaseLoan <@ eCreate]
   return Create {..}
 
 data TextEntry = TextEntry
@@ -89,19 +94,14 @@ userText = _userTE
 
 entry :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => UI.Behavior String -> m TextEntry
 entry bValue = do
-  -- single text entry
   input <- UI.liftUI $ Elements.input
-
   bEditing <- UI.liftUI $ UI.stepper False $ and <$> R.unions [True <$ Events.focus input, False <$ Events.blur input]
 
   -- BLiver måske aldirg kaldt nu?
-  UI.liftUI $ UI.onChanges bValue $ \s -> do
+  x <- UI.liftUI $ UI.onChanges bValue $ \s -> do
+    traceShowM "gg"
     editing <- UI.currentValue bEditing
     when (not editing) $ void $ UI.element input # UI.set UI.value s
-
-  -- liftIOLater $ onChange bValue $ \s -> runUI window $ do
-  ---   editing <- liftIO $ currentValue bEditing
-  -- when (not editing) $ void $ element input # set value s
 
   let _elementTE = input
       _userTE = UI.tidings bValue $ Events.valueChange input
