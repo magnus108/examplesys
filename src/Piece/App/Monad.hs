@@ -2,18 +2,19 @@ module Piece.App.Monad
   ( App (..),
     AppEnv,
     runApp,
-    runAppAsUI,
+    runAppAsIO,
   )
 where
 
 import Control.Monad.Except (MonadError)
 import Control.Monad.Fix
-import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import GHC.IO (unsafeInterleaveIO)
 import qualified Graphics.UI.Threepenny.Core as UI
-import Piece.App.Env (Env)
+import Piece.App.Env (Env, window)
 import Piece.App.Error (AppError)
-import Piece.CakeSlayer (ErrorWithSource)
+import Piece.CakeSlayer.Error (ErrorWithSource)
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
+import UnliftIO (MonadUnliftIO)
 
 type AppEnv = Env App
 
@@ -27,13 +28,21 @@ newtype App a = App
       MonadIO,
       MonadUnliftIO,
       MonadReader AppEnv,
-      UI.MonadUI,
+      MonadError (ErrorWithSource AppError),
       MonadFix,
-      MonadError (ErrorWithSource AppError)
+      UI.MonadUI
     )
 
-runApp :: AppEnv -> App a -> UI.UI a
+instance MonadFix (CakeSlayer.App err env) where
+  mfix f = CakeSlayer.App $ mfix (CakeSlayer.unApp . f)
+
+instance UI.MonadUI (CakeSlayer.App err AppEnv) where
+  liftUI ui = CakeSlayer.App $ ReaderT $ \env -> do
+    CakeSlayer.runApp env $ do
+      liftIO $ unsafeInterleaveIO $ UI.runUI (window env) ui
+
+runApp :: AppEnv -> App a -> IO a
 runApp env = CakeSlayer.runApp env . unApp
 
-runAppAsUI :: AppEnv -> App a -> UI.UI (Either (ErrorWithSource AppError) a)
-runAppAsUI env = CakeSlayer.runAppAsUI env . unApp
+runAppAsIO :: AppEnv -> App a -> IO (Either (ErrorWithSource AppError) a)
+runAppAsIO env = CakeSlayer.runAppAsIO env . unApp

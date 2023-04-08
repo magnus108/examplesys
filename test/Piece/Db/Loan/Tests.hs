@@ -29,7 +29,7 @@ mockEnv =
   MockEnv
     { loanEnv =
         Env.LoanEnv
-          { bDatabaseLoan = pure (DB.empty),
+          { bDatabaseLoan = pure (DB.create (Loan.Loan "test") DB.empty),
             eDatabaseLoan = undefined,
             bSelectionUser = undefined,
             bSelectionItem = undefined,
@@ -41,10 +41,10 @@ mockEnv =
           }
     }
 
-runMockApp :: UI.UI (Maybe Loan.Loan)
+runMockApp :: IO (Maybe Loan.Loan)
 runMockApp = runApp mockEnv $ do
   x <- DBLoan.lookup
-  R.currentValue (x <*> (pure 10))
+  R.currentValue (x <*> pure 0)
 
 tests :: TestTree
 tests =
@@ -52,11 +52,11 @@ tests =
     concat
       [ fromAssertions
           "lookup"
-          [ dadty
+          [ lookupLoan
           ]
       ]
   where
-    dadty = do
-      c <- undefined :: IO () -- runMockApp
-      let a = undefined
-      a @=? c
+    lookupLoan = do
+      lookup <- runMockApp
+      let value = Just (Loan.Loan "test")
+      value @=? lookup

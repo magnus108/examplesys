@@ -24,6 +24,7 @@ common common-all
         Piece.CakeSlayer.Has
         Piece.CakeSlayer.Monad
         Piece.Config
+        Piece.Effects.Change
         Piece.Core.Item
         Piece.Core.Loan
         Piece.Core.User
