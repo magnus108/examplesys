@@ -20,6 +20,7 @@ import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Error as Error
 import qualified Piece.App.Monad as Monad
+import qualified Piece.CakeSlayer.Error as E
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
 import qualified Piece.Core.Loan as Loan
@@ -28,6 +29,7 @@ import qualified Piece.Effects.Change as Change
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
+import UnliftIO.Exception
 
 main :: Int -> IO ()
 main port = do
@@ -39,14 +41,16 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ do
-      mfix (\env -> Monad.runApp env $ app window config)
+      mfix
+        ( \env -> Monad.runApp env $ app window config
+        )
 
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
 app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError m) => UI.Window -> Config.Config -> m (Monad.AppEnv)
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Change.read ""
+  databaseLoan <- Change.read datastoreLoan
 
   -- GUI
   lol <- LoanCreate.setup

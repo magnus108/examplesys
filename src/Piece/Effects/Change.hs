@@ -6,6 +6,7 @@ module Piece.Effects.Change
   )
 where
 
+import Control.Monad.Catch (MonadCatch, tryJust)
 import GHC.IO.Exception
 import GHC.IO.Exception (IOException (IOError))
 import qualified Graphics.UI.Threepenny.Core as UI
@@ -18,7 +19,6 @@ import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 import System.IO.Error (isDoesNotExistError, isPermissionError)
-import UnliftIO (MonadUnliftIO, try, tryJust)
 
 class Monad m => MonadChanges m where
   listen :: String -> m ()
@@ -42,9 +42,9 @@ instance MonadRead Monad.App where
   read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (MonadUnliftIO m, MonadIO m, WithError m) => String -> m (Db.Database Loan.Loan)
+readImpl :: (MonadIO m, WithError m, MonadCatch m) => String -> m (Db.Database Loan.Loan)
 readImpl datastoreLoan = do
-  databaseLoan <- tryJust handleReadFile $ Db.readJson datastoreLoan -- `catchError` (\err -> throwError NotFound
+  databaseLoan <- tryJust handleReadFile $ Db.readJson datastoreLoan
   case databaseLoan of
     Left x -> throwError NotFound
     Right x -> return x

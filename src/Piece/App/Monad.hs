@@ -6,6 +6,7 @@ module Piece.App.Monad
   )
 where
 
+import Control.Monad.Catch (MonadCatch, MonadThrow, catch, throwM, try)
 import Control.Monad.Except (MonadError)
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO)
@@ -29,7 +30,9 @@ newtype App a = App
       MonadError (ErrorWithSource AppError),
       MonadFix,
       UI.MonadUI,
-      MonadUnliftIO
+      MonadUnliftIO,
+      MonadThrow,
+      MonadCatch
     )
 
 runApp :: AppEnv -> App a -> UI.UI a

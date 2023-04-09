@@ -6,13 +6,13 @@ module Piece.CakeSlayer.Monad
 where
 
 import Control.Exception (throwIO)
+import Control.Monad.Catch (MonadCatch, MonadThrow, catch, throwM, try)
 import Control.Monad.Except (MonadError (..), MonadFix)
 import Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import GHC.IO.Exception (userError)
 import Graphics.UI.Threepenny (MonadUI (..), UI, askWindow, runUI)
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
-import UnliftIO.Exception (catch, try)
 
 newtype App (err :: Type) env a = App
   { unApp :: ReaderT env UI a
@@ -21,6 +21,8 @@ newtype App (err :: Type) env a = App
     ( Functor,
       Applicative,
       Monad,
+      MonadThrow,
+      MonadCatch,
       MonadUnliftIO,
       MonadReader env,
       MonadIO,
@@ -33,6 +35,7 @@ instance MonadFail (App err env) where
 instance MonadUI (App err env) where
   liftUI = App . lift . liftUI
 
+-- Not sure about this
 instance MonadUnliftIO UI where
   withRunInIO inner = do
     window <- askWindow
@@ -43,7 +46,7 @@ instance
   MonadError (ErrorWithSource err) (App err env)
   where
   throwError :: ErrorWithSource err -> App err env a
-  throwError = liftIO . throwIO . AppException
+  throwError = throwM . AppException
   {-# INLINE throwError #-}
 
   catchError ::
