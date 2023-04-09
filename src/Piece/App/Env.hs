@@ -16,11 +16,9 @@ import Piece.Db.Db (Database, DatabaseKey)
 import qualified Reactive.Threepenny as R
 
 data Env (m :: Type -> Type) = Env
-  { loanEnv :: LoanEnv,
-    window :: UI.Window
+  { loanEnv :: LoanEnv
   }
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
-  deriving (Has UI.Window) via Field "window" (Env m)
 
 type WithLoanEnv env m = (MonadReader env m, Has LoanEnv env)
 

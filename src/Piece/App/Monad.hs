@@ -10,9 +10,10 @@ import Control.Monad.Except (MonadError)
 import Control.Monad.Fix
 import GHC.IO (unsafeInterleaveIO)
 import qualified Graphics.UI.Threepenny.Core as UI
-import Piece.App.Env (Env, window)
+import Piece.App.Env (Env)
 import Piece.App.Error (AppError)
 import Piece.CakeSlayer.Error (ErrorWithSource)
+import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
 import UnliftIO (MonadUnliftIO)
 
@@ -28,40 +29,12 @@ newtype App a = App
       MonadIO,
       MonadUnliftIO,
       MonadReader AppEnv,
-      MonadError (ErrorWithSource AppError)
+      MonadError (ErrorWithSource AppError),
+      MonadFix
     )
 
-instance MonadFix App where
-  mfix f = do
-    var <- liftIO newEmptyMVar
-    ans <- liftIO $ unsafeInterleaveIO $ takeMVar var
-    result <- f ans
-    putMVar var result
-    return result
-
-instance UI.MonadUI App where
-  liftUI ui = do
-    var <- liftIO newEmptyMVar
-    ans <- liftIO $ unsafeInterleaveIO $ takeMVar var
-    let f x =
-          mfix
-            ( \ ~(y, window) -> do
-                UI.runUI window $ do
-                  w <- UI.askWindow
-                  return (y, w)
-            )
-    (result, w) <- liftIO $ f ans
-    putMVar var result
-    return result
-
---      CakeSlayer.App $ ReaderT $ \env -> do
---   CakeSlayer.runApp env $ do
---    traceShowM "324"
----   liftIO $ do
---   traceShowM "3241"
---  gg <- UI.runUI (window env) ui
--- traceShowM "32411"
--- return gg
+instance MonadFix (CakeSlayer.App err env) where
+  mfix f = CakeSlayer.App $ mfix (CakeSlayer.unApp . f)
 
 runApp :: AppEnv -> App a -> IO a
 runApp env = CakeSlayer.runApp env . unApp

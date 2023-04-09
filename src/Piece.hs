@@ -5,6 +5,9 @@ module Piece
   )
 where
 
+import Control.Concurrent (forkIO, killThread)
+import Control.Concurrent.Chan
+import qualified Control.Concurrent.Chan as Chan
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import qualified Data.ByteString as UI
@@ -28,6 +31,7 @@ import qualified Relude.Unsafe as Unsafe
 main :: Int -> IO ()
 main port = do
   config <- Config.load
+  messages <- Chan.newChan
   UI.startGUI
     UI.defaultConfig
       { UI.jsPort = Just port,
@@ -36,34 +40,66 @@ main port = do
       }
     $ \window -> void $ do
       traceShowM "a"
-      (env, content) <- liftIO $ mfix (\(~(env, content)) -> Monad.runApp env $ app window config)
+      -- (env, content) <- liftIO $ mfix (\(~(env, content)) -> Monad.runApp env $ app window config)
+
+      -- ENV
+      (env, content) <- liftIO $ mdo
+        (env, content) <- Monad.runApp env $ app config messages window
+        return (env, content)
 
       -- CHANGES
-      -- listen <- liftIO $ Monad.runApp env $ do
-      -- Change.listen (Config.datastoreLoan config)
+      listen <- liftIO $ Monad.runApp env $ do
+        Change.listen window messages (Config.datastoreLoan config)
 
       traceShowM "b"
       content2 <- UI.liftUI $ UI.string "lola"
       content3 <- UI.liftUI $ UI.string "lola2"
       UI.getBody window # UI.set UI.children [content2, UI.getElement content, content3]
 
+      messageReceiver <- liftIO $ forkIO $ receiveMessages window messages
+
+      UI.on UI.disconnect window $ const $ liftIO $ do
+        killThread messageReceiver
+
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
-app ::
-  (UI.MonadUI m, WithDefaults env m, MonadIO m, MonadFix m) =>
-  UI.Window ->
-  Config.Config ->
-  m (Monad.AppEnv, LoanCreate.Create)
-app window Config.Config {..} = do
+receiveMessages :: UI.Window -> Chan (IO ()) -> IO ()
+receiveMessages w msgs = do
+  messages <- Chan.getChanContents msgs
+  forM_ messages $ \msg -> do
+    a <- msg
+    return a
+
+--- USE THROW
+--- USE CHAN
+
+runM :: (WithDefaults env m, MonadIO m, MonadFix m) => Chan (IO ()) -> UI.Window -> UI.UI a -> m a
+runM chan window ui = do
+  i <- liftIO $ UI.runUI window ui
+  liftIO $ writeChan chan $ do
+    let a = (const ()) $! i
+    return a
+  return i
+
+app2 :: (WithDefaults env m, MonadIO m, MonadFix m) => Config.Config -> Chan (IO ()) -> UI.Window -> m (Monad.AppEnv, UI.Element)
+app2 config chan window = do
+  traceShowM "sssahater"
+  content <- runM chan window $ UI.string "loladskolad"
+  traceShowM "skater"
+  let env = undefined
+  return (env, content)
+
+app :: (WithDefaults env m, MonadIO m, MonadFix m) => Config.Config -> Chan (IO ()) -> UI.Window -> m (Monad.AppEnv, LoanCreate.Create)
+app Config.Config {..} chan window = do
   -- READ
   databaseLoan <- Change.read datastoreLoan
 
   -- GUI
   traceShowM "1"
-  lol <- LoanCreate.setup
+  lol <- LoanCreate.setup chan window
   traceShowM "2"
-  content2 <- UI.liftUI $ UI.string "lola"
-  content <- UI.liftUI $ mdo
+  content2 <- runM chan window $ UI.string "lola"
+  content <- runM chan window $ mdo
     createBtn <- Elements.button #+ [UI.string "Creater"]
     bDatabase <-
       R.stepper databaseLoan $
@@ -85,14 +121,14 @@ app window Config.Config {..} = do
   -- EVENTS
 
   -- BEHAVIOR
-  bDatabaseLoan <- UI.liftUI $ R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
-  bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
-  bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+  bDatabaseLoan <- runM chan window $ R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
+  bSelectionUser <- runM chan window $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionItem <- runM chan window $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionLoan <- runM chan window $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bFilterUser <- runM chan window $ R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterItem <- runM chan window $ R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- runM chan window $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
+  bModalState <- runM chan window $ R.stepper False $ Unsafe.head <$> R.unions []
 
   -- ENV
   let env =
@@ -107,10 +143,8 @@ app window Config.Config {..} = do
                   bFilterItem = bFilterItem,
                   bFilterLoan = bFilterLoan,
                   bModalState = bModalState
-                },
-            window = window
+                }
           }
-
   return (env, lol)
 
 items = UI.mkWriteAttr $ \i x -> void $ do
