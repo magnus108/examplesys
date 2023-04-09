@@ -6,15 +6,19 @@ module Piece.Effects.Change
   )
 where
 
-import Control.Concurrent (Chan, writeChan)
-import GHC.IO (unsafeInterleaveIO)
+import GHC.IO.Exception
+import GHC.IO.Exception (IOException (IOError))
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env as Env
+import Piece.App.Error (AppError (NotFound), WithError)
 import qualified Piece.App.Monad as Monad
+import Piece.CakeSlayer.Error (catchError, throwError)
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
+import System.IO.Error (isDoesNotExistError, isPermissionError)
+import UnliftIO (MonadUnliftIO, try, tryJust)
 
 class Monad m => MonadChanges m where
   listen :: String -> m ()
@@ -38,7 +42,15 @@ instance MonadRead Monad.App where
   read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (MonadIO m) => String -> m (Db.Database Loan.Loan)
+readImpl :: (MonadUnliftIO m, MonadIO m, WithError m) => String -> m (Db.Database Loan.Loan)
 readImpl datastoreLoan = do
-  databaseLoan <- Db.readJson datastoreLoan
-  return databaseLoan
+  databaseLoan <- tryJust handleReadFile $ Db.readJson datastoreLoan -- `catchError` (\err -> throwError NotFound
+  case databaseLoan of
+    Left x -> throwError NotFound
+    Right x -> return x
+  where
+    handleReadFile :: IOError -> Maybe String
+    handleReadFile er
+      | isDoesNotExistError er = Just "readFile: does not exist"
+      | isPermissionError er = Just "readFile: permission denied"
+      | otherwise = Nothing

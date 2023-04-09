@@ -1,6 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Piece.CakeSlayer.Has
   ( Has (..),

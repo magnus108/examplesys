@@ -7,9 +7,9 @@ where
 
 import Control.Exception (throwIO)
 import Control.Monad.Except (MonadError (..), MonadFix)
-import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import GHC.IO.Exception (userError)
-import Graphics.UI.Threepenny (MonadUI (..), UI)
+import Graphics.UI.Threepenny (MonadUI (..), UI, askWindow, runUI)
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
 import UnliftIO.Exception (catch, try)
@@ -21,21 +21,22 @@ newtype App (err :: Type) env a = App
     ( Functor,
       Applicative,
       Monad,
-      MonadFail,
+      MonadUnliftIO,
       MonadReader env,
       MonadIO,
-      MonadUnliftIO,
-      MonadFix,
-      MonadUI
+      MonadFix
     )
 
-instance MonadFail UI where
+instance MonadFail (App err env) where
   fail err = liftIO $ throwIO $ userError err
 
-instance MonadUnliftIO UI
+instance MonadUI (App err env) where
+  liftUI = App . lift . liftUI
 
-instance (MonadUI m) => MonadUI (ReaderT r m) where
-  liftUI = lift . liftUI
+instance MonadUnliftIO UI where
+  withRunInIO inner = do
+    window <- askWindow
+    liftIO $ inner $ runUI window
 
 instance
   (Show err, Typeable err) =>

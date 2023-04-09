@@ -18,6 +18,7 @@ import qualified Graphics.UI.Threepenny.Elements as Elements
 import qualified Graphics.UI.Threepenny.Events as Events
 import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
+import qualified Piece.App.Error as Error
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
@@ -42,10 +43,10 @@ main port = do
 
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
-app :: (WithDefaults env m, MonadFix m, UI.MonadUI m) => UI.Window -> Config.Config -> m (Monad.AppEnv)
+app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError m) => UI.Window -> Config.Config -> m (Monad.AppEnv)
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Change.read datastoreLoan
+  databaseLoan <- Change.read ""
 
   -- GUI
   lol <- LoanCreate.setup

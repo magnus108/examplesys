@@ -58,11 +58,9 @@ bListBox bFilterLoan = do
 
 setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => m Create
 setup = mdo
-  traceShowM "gg23"
   listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
-  traceShowM "gg24"
   filterLoan <- UI.liftUI $ Widgets.entry (Env.bFilterLoan loanEnv)
-  traceShowM "gg26"
+
   bob <- UI.liftUI $ UI.string "bob"
   btn <- UI.liftUI $ Elements.button # UI.set UI.children [bob]
   view <- UI.liftUI $ Elements.div # UI.set UI.children [UI.getElement listBoxLoan, UI.getElement filterLoan, btn]
