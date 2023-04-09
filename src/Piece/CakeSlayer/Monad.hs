@@ -1,18 +1,21 @@
 module Piece.CakeSlayer.Monad
   ( App (..),
     runApp,
-    runAppAsIO,
+    runAppAsUI,
   )
 where
 
-import Control.Exception (catch, throwIO, try)
-import Control.Monad.Except (MonadError (..))
+import Control.Exception (throwIO)
+import Control.Monad.Except (MonadError (..), MonadFix)
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import GHC.IO.Exception (userError)
+import Graphics.UI.Threepenny (MonadUI (..), UI)
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
+import UnliftIO.Exception (catch, try)
 
 newtype App (err :: Type) env a = App
-  { unApp :: ReaderT env IO a
+  { unApp :: ReaderT env UI a
   }
   deriving newtype
     ( Functor,
@@ -21,8 +24,18 @@ newtype App (err :: Type) env a = App
       MonadFail,
       MonadReader env,
       MonadIO,
-      MonadUnliftIO
+      MonadUnliftIO,
+      MonadFix,
+      MonadUI
     )
+
+instance MonadFail UI where
+  fail err = liftIO $ throwIO $ userError err
+
+instance MonadUnliftIO UI
+
+instance (MonadUI m) => MonadUI (ReaderT r m) where
+  liftUI = lift . liftUI
 
 instance
   (Show err, Typeable err) =>
@@ -41,14 +54,14 @@ instance
     ioAction `catch` \(AppException e) -> runApp env $ handler e
   {-# INLINE catchError #-}
 
-runApp :: env -> App err env a -> IO a
+runApp :: env -> App err env a -> UI a
 runApp env = usingReaderT env . unApp
 {-# INLINE runApp #-}
 
-runAppAsIO ::
+runAppAsUI ::
   (Show err, Typeable err) =>
   env ->
   App err env a ->
-  IO (Either (ErrorWithSource err) a)
-runAppAsIO env = firstF unAppException . try . runApp env
-{-# INLINE runAppAsIO #-}
+  UI (Either (ErrorWithSource err) a)
+runAppAsUI env = firstF unAppException . try . runApp env
+{-# INLINE runAppAsUI #-}

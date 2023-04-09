@@ -30,14 +30,12 @@ newtype App a = App
       MonadUnliftIO,
       MonadReader AppEnv,
       MonadError (ErrorWithSource AppError),
-      MonadFix
+      MonadFix,
+      UI.MonadUI
     )
 
-instance MonadFix (CakeSlayer.App err env) where
-  mfix f = CakeSlayer.App $ mfix (CakeSlayer.unApp . f)
-
-runApp :: AppEnv -> App a -> IO a
+runApp :: AppEnv -> App a -> UI.UI a
 runApp env = CakeSlayer.runApp env . unApp
 
-runAppAsIO :: AppEnv -> App a -> IO (Either (ErrorWithSource AppError) a)
-runAppAsIO env = CakeSlayer.runAppAsIO env . unApp
+runAppAsIO :: AppEnv -> App a -> UI.UI (Either (ErrorWithSource AppError) a)
+runAppAsIO env = CakeSlayer.runAppAsUI env . unApp

@@ -15,6 +15,9 @@ common common-all
         , containers
         , threepenny-gui
         , exceptions
+        , websockets
+        , async
+        , retry
     other-modules:
         Piece
         Piece.App.Env
@@ -77,6 +80,10 @@ test-suite examplesys-test
     import: common-all
     type: exitcode-stdio-1.0
     main-is: Spec.hs
+    other-modules:
+        Piece.Core.Item.Tests
+        Piece.Db.Loan.Tests
+        TestSuite.Util
     hs-source-dirs:
         src, test
     build-depends:

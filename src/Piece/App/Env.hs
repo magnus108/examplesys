@@ -7,11 +7,8 @@ module Piece.App.Env
   )
 where
 
-import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.CakeSlayer.Has (Field (..), Has)
-import Piece.Core.Item (Item)
 import Piece.Core.Loan (Loan)
-import Piece.Core.User (User)
 import Piece.Db.Db (Database, DatabaseKey)
 import qualified Reactive.Threepenny as R
 

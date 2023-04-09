@@ -31,7 +31,6 @@ import qualified Relude.Unsafe as Unsafe
 main :: Int -> IO ()
 main port = do
   config <- Config.load
-  messages <- Chan.newChan
   UI.startGUI
     UI.defaultConfig
       { UI.jsPort = Just port,
@@ -39,9 +38,57 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ do
-      traceShowM "a"
-      -- (env, content) <- liftIO $ mfix (\(~(env, content)) -> Monad.runApp env $ app window config)
+      mfix (\(env) -> Monad.runApp env $ app window config)
 
+type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
+
+app :: (WithDefaults env m, MonadFix m, UI.MonadUI m) => UI.Window -> Config.Config -> m (Monad.AppEnv)
+app window Config.Config {..} = do
+  -- READ
+  databaseLoan <- Change.read datastoreLoan
+
+  -- GUI
+  lol <- LoanCreate.setup
+
+  _ <- UI.liftUI $ UI.getBody window #+ [UI.element lol]
+
+  let eCreate = LoanCreate.eCreate lol
+
+  let tLoanDatabase = LoanCreate.tDatabaseLoan lol
+  let eLoanDatabase = R.rumors tLoanDatabase
+
+  let tLoanFilter = LoanCreate.tLoanFilter lol
+  let eLoanFilter = R.rumors tLoanFilter
+
+  -- BEHAVIOR
+  bDatabaseLoan <- UI.liftUI $ R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
+  bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
+  bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+
+  -- ENV
+  let env =
+        Env.Env
+          { loanEnv =
+              Env.LoanEnv
+                { bDatabaseLoan = bDatabaseLoan,
+                  bSelectionUser = bSelectionUser,
+                  bSelectionItem = bSelectionItem,
+                  bSelectionLoan = bSelectionLoan,
+                  bFilterUser = bFilterUser,
+                  bFilterItem = bFilterItem,
+                  bFilterLoan = bFilterLoan,
+                  bModalState = bModalState
+                }
+          }
+
+  return env
+
+{-
       -- ENV
       (env, content) <- liftIO $ mdo
         (env, content) <- Monad.runApp env $ app config messages window
@@ -149,3 +196,4 @@ app Config.Config {..} chan window = do
 
 items = UI.mkWriteAttr $ \i x -> void $ do
   return x # UI.set UI.children [] #+ map (\i -> Elements.div #+ [i]) i
+  -}

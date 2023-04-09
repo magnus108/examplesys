@@ -9,9 +9,7 @@ module Piece.Gui.Loan.Create
   )
 where
 
-import Control.Concurrent (Chan, writeChan)
 import Control.Monad.Fix
-import GHC.IO (unsafeInterleaveIO)
 import Graphics.UI.Threepenny.Core ((#), (#+))
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as Elements
@@ -58,22 +56,19 @@ bListBox bFilterLoan = do
       <*> bShowLoan
       <*> bDatabaseLoan
 
-setup :: (Env.WithLoanEnv env m, MonadIO m, MonadFix m) => Chan (IO ()) -> UI.Window -> m Create
-setup chan window = mdo
-  traceShowM "32"
-  -- listBoxLoan <- runM chan window $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
-  traceShowM "12"
-  filterLoan <- entry chan window (Env.bFilterLoan loanEnv)
-  traceShowM "121"
-  bob <- runM chan window $ UI.string "bob"
-  traceShowM "122"
-  btn <- runM chan window $ Elements.button # UI.set UI.children [bob]
-  traceShowM "123"
-  view <- runM chan window $ Elements.div # UI.set UI.children [UI.getElement filterLoan, btn]
-  traceShowM "124"
+setup :: (UI.MonadUI m, Env.WithLoanEnv env m, MonadFix m) => m Create
+setup = mdo
+  traceShowM "gg23"
+  listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
+  traceShowM "gg24"
+  filterLoan <- UI.liftUI $ Widgets.entry (Env.bFilterLoan loanEnv)
+  traceShowM "gg26"
+  bob <- UI.liftUI $ UI.string "bob"
+  btn <- UI.liftUI $ Elements.button # UI.set UI.children [bob]
+  view <- UI.liftUI $ Elements.div # UI.set UI.children [UI.getElement listBoxLoan, UI.getElement filterLoan, btn]
 
-  --  let tLoanSelection = Widgets.userSelection listBoxLoan
-  let tLoanFilter = userText filterLoan
+  let tLoanSelection = Widgets.userSelection listBoxLoan
+  let tLoanFilter = Widgets.userText filterLoan
       tFilterLoan = isPrefixOf <$> tLoanFilter
       bFilterLoan = R.facts tFilterLoan
 
@@ -87,49 +82,3 @@ setup chan window = mdo
 
   let tDatabaseLoan = R.tidings bDatabaseLoan $ Unsafe.head <$> R.unions [Db.create (Loan.Loan "dadda") <$> bDatabaseLoan <@ eCreate]
   return Create {..}
-
-runM :: (MonadIO m, MonadFix m) => Chan (IO ()) -> UI.Window -> UI.UI a -> m a
-runM chan window ui = do
-  i <- liftIO $ UI.runUI window ui
-  liftIO $ writeChan chan $ do
-    -- i <- liftIO $ UI.runUI window ui
-    return ()
-  return i
-
-data TextEntry = TextEntry
-  { _elementTE :: UI.Element,
-    _userTE :: UI.Tidings String
-  }
-
-instance UI.Widget TextEntry where getElement = _elementTE
-
-userText :: TextEntry -> UI.Tidings String
-userText = _userTE
-
-onChanges :: Chan (IO ()) -> UI.Window -> UI.Behavior a -> (a -> UI.UI void) -> IO ()
-onChanges chan win b f = do
-  traceShowM "a2a"
-  R.onChange
-    b
-    ( \x -> void $ do
-        traceShowM "a2aaa"
-        runM chan win $ f x
-    )
-
-entry :: (Env.WithLoanEnv env m, MonadIO m, MonadFix m) => Chan (IO ()) -> UI.Window -> UI.Behavior String -> m TextEntry
-entry chan window bValue = do
-  traceShowM "c2"
-  input <- runM chan window $ Elements.input
-  traceShowM "b2"
-  bEditing <- runM chan window $ UI.stepper False $ and <$> R.unions [True <$ Events.focus input, False <$ Events.blur input]
-  traceShowM "a2"
-
-  -- BLiver måske aldirg kaldt nu?
-  x <- liftIO $ onChanges chan window bValue $ \s -> do
-    traceShowM "gg"
-  --    editing <- UI.currentValue bEditing
-  --   when (not editing) $ void $ return () -- UI.element input # UI.set UI.value s
-  traceShowM "a22"
-  let _elementTE = input
-      _userTE = UI.tidings bValue $ Events.valueChange input
-  return TextEntry {..}
