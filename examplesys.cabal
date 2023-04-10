@@ -22,6 +22,9 @@ common common-all
     other-modules:
         Piece
         Piece2
+        Piece.Db.Loan2
+        Piece.Effects.Change2
+        Piece.Gui.Loan.Create2
         Piece.App.Env
         Piece.App.Env2
         Piece.App.Error

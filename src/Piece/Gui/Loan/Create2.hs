@@ -40,8 +40,8 @@ showLoan = do
 
 displayLoan :: (MonadReader r m, Env.HasLoanBehavior r) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayLoan = do
-  show <- showLoan
-  return $ (UI.string .) <$> show
+  show' <- showLoan
+  return $ (UI.string .) <$> show'
 
 bListBox :: (MonadReader r m, Env.HasLoanBehavior r) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
 bListBox bFilterLoan = do

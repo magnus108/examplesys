@@ -10,7 +10,7 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env2 as Env
 import qualified Piece.App.Monad2 as Monad
 import qualified Piece.Config as Config
-import qualified Piece.Db.Db as Db
+import qualified Piece.Effects.Change2 as Change
 import qualified Piece.Gui.Loan.Create2 as LoanCreate
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -28,9 +28,19 @@ main port = do
       env <- Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config
       return env
 
-app :: (UI.MonadUI m, MFix.MonadFix m, MonadReader r m, Env.HasLoanBehavior r) => UI.Window -> Config.Config -> m Env.AppBehavior
+app ::
+  ( UI.MonadUI m,
+    MFix.MonadFix m,
+    MonadReader r m,
+    Env.HasLoanBehavior r,
+    Change.MonadRead m
+  ) =>
+  UI.Window ->
+  Config.Config ->
+  m Env.AppBehavior
 app window Config.Config {..} = do
-  let databaseLoan = Db.empty
+  -- READ
+  databaseLoan <- Change.read datastoreLoan
 
   -- GUI
   lol <- LoanCreate.setup

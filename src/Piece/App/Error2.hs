@@ -2,6 +2,9 @@
 
 module Piece.App.Error2
   ( AppError,
+    AsUserError,
+    UserError,
+    _NotFound,
   )
 where
 

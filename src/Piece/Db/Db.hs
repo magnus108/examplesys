@@ -5,6 +5,7 @@ module Piece.Db.Db
     create,
     empty,
     readJson,
+    readJson2,
     writeJson,
     lookup,
     keys,
@@ -13,10 +14,13 @@ module Piece.Db.Db
   )
 where
 
+import Control.Exception (try)
 import Data.Aeson
 import qualified Data.ByteString as BS
 import qualified Data.Map as M
+import GHC.IO.Exception (IOError)
 import qualified Relude.Unsafe as Unsafe
+import System.IO.Error (IOError)
 import Prelude hiding (empty, toList)
 
 type DatabaseKey = Int
@@ -51,6 +55,12 @@ lookup key x = M.lookup key (db x)
 
 readJson :: (MonadIO m, FromJSON a) => FilePath -> m a
 readJson fp = liftIO $ Unsafe.fromJust . decode . fromStrict <$> BS.readFile fp
+
+readJson_ :: FromJSON a => FilePath -> IO a
+readJson_ fp = Unsafe.fromJust . decode . fromStrict <$> BS.readFile fp
+
+readJson2 :: (MonadIO m, FromJSON a) => FilePath -> m (Either IOError a)
+readJson2 fp = liftIO $ try (readJson_ fp)
 
 writeJson :: (MonadIO m, ToJSON a) => FilePath -> a -> m ()
 writeJson fp items = liftIO $ BS.writeFile fp $ toStrict $ encode items
