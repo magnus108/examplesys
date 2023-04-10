@@ -30,7 +30,6 @@ newtype App a = App
       MonadError (ErrorWithSource AppError),
       MonadFix,
       UI.MonadUI,
-      MonadUnliftIO,
       MonadThrow,
       MonadCatch
     )

@@ -10,7 +10,8 @@ import Control.Monad.Catch (MonadCatch, MonadThrow, catch, throwM, try)
 import Control.Monad.Except (MonadError (..), MonadFix)
 import Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import GHC.IO.Exception (userError)
-import Graphics.UI.Threepenny (MonadUI (..), UI, askWindow, runUI)
+import GHC.IO.Unsafe (unsafeDupableInterleaveIO)
+import Graphics.UI.Threepenny (MonadUI (..), UI, Window, askWindow, runUI)
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
 
@@ -23,23 +24,16 @@ newtype App (err :: Type) env a = App
       Monad,
       MonadThrow,
       MonadCatch,
-      MonadUnliftIO,
       MonadReader env,
       MonadIO,
       MonadFix
     )
 
 instance MonadFail (App err env) where
-  fail err = liftIO $ throwIO $ userError err
+  fail err = throwM $ userError err
 
 instance MonadUI (App err env) where
   liftUI = App . lift . liftUI
-
--- Not sure about this
-instance MonadUnliftIO UI where
-  withRunInIO inner = do
-    window <- askWindow
-    liftIO $ inner $ runUI window
 
 instance
   (Show err, Typeable err) =>

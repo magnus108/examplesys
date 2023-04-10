@@ -8,6 +8,7 @@ where
 import Control.Concurrent (forkIO, killThread)
 import Control.Concurrent.Chan
 import qualified Control.Concurrent.Chan as Chan
+import qualified Control.Monad.Catch as NU
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
 import qualified Data.ByteString as UI
@@ -40,10 +41,15 @@ main port = do
         UI.jsStatic = Just "./static",
         UI.jsCustomHTML = Just "index.html"
       }
-    $ \window -> void $ do
-      mfix
-        ( \env -> Monad.runApp env $ app window config
-        )
+    $ \window ->
+      do
+        void $
+          mfix
+            ( \env -> Monad.runApp env $ app window config
+            )
+        `NU.catch` \(e :: E.AppException Error.AppError) -> void $ do
+          bob <- UI.string "ups"
+          UI.getBody window #+ [UI.element bob]
 
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
@@ -53,8 +59,10 @@ app window Config.Config {..} = do
   databaseLoan <- Change.read datastoreLoan
 
   -- GUI
-  lol <- LoanCreate.setup
+  -- databaseLoan <- withRunInIO $ \x -> do
+  -- Db.readJson datastoreLoan :: IO (Db.Database Loan.Loan)
 
+  lol <- LoanCreate.setup
   _ <- UI.liftUI $ UI.getBody window #+ [UI.element lol]
 
   -- LISTEN
