@@ -6,6 +6,7 @@ version: 1.0.0.0
 common common-all
     build-depends:
         base >=4.16 && <5
+        , lens
         , mtl
         , transformers
         , relude
@@ -20,9 +21,13 @@ common common-all
         , retry
     other-modules:
         Piece
+        Piece2
         Piece.App.Env
+        Piece.App.Env2
         Piece.App.Error
+        Piece.App.Error2
         Piece.App.Monad
+        Piece.App.Monad2
         Piece.CakeSlayer
         Piece.CakeSlayer.Error
         Piece.CakeSlayer.Has

@@ -28,6 +28,7 @@ import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change as Change
 import qualified Piece.Gui.Loan.Create as LoanCreate
+import qualified Piece2
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 import UnliftIO.Exception

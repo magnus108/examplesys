@@ -13,6 +13,7 @@ import Control.Monad.IO.Unlift (MonadUnliftIO)
 import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.App.Env (Env)
 import Piece.App.Error (AppError)
+import qualified Piece.App.Monad2
 import Piece.CakeSlayer.Error (ErrorWithSource)
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
 
