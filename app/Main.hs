@@ -1,9 +1,9 @@
 module Main (main) where
 
-import qualified Piece2
+import qualified Piece
 import Text.Read
 
 main :: IO ()
 main = do
   [port] <- getArgs
-  Piece2.main (read port)
+  Piece.main (read port)

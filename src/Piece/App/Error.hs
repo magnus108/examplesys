@@ -1,45 +1,33 @@
 module Piece.App.Error
   ( WithError,
     AppError (..),
+    UserError (..),
+    As (..),
   )
 where
 
 import qualified Piece.CakeSlayer.Error as CakeSlayer
 
-type WithError m = CakeSlayer.WithError AppError m
+type WithError e m = CakeSlayer.WithError e m
 
--- | App errors type.
-data AppError
-  = -- \| General not found.
-    NotFound
-  -- \| Some exceptional circumstance has happened to stop execution and return.
-  --    Optional text to provide some context in server logs.
-  --
-  -- \| ServerError Text
-
-  -- \| A required permission level was not met. Optional text to provide some context.
-  -- \| NotAllowed Text
-
-  -- \| Given inputs do not conform to the expected format or shape. Optional
-  --    text to provide some context in server logs.
-  --
-  -- \| Invalid Text
-
-  -- \| Some header expected, but not present in header list.
-  --
-  -- \| MissingHeader HeaderName
-
-  -- \| An authentication header that was required was provided but not in a
-  --    format that the server can understand.
-  --
-  -- \| HeaderDecodeError Text
-
-  -- \| Data base specific errors.
-  --   | DbError Text
-
-  -- \| Data base named parameters errors.
-  --    | DbNamedError PgNamedError
+data UserError = NotFound
   deriving stock (Show, Eq)
+
+data AppError = AppUserError UserError | GGerr
+  deriving stock (Show, Eq)
+
+instance As AppError UserError where
+  as = AppUserError
+  match (AppUserError x) = Just x
+  match _ = Nothing
+
+instance As AppError AppError where
+  as = id
+  match = Just
+
+class As s a where
+  as :: a -> s
+  match :: s -> Maybe a
 
 -- | Map 'AppError' into a HTTP error code.
 -- toHttpError :: CakeSlayer.ErrorWithSource AppError -> Servant.ServerError

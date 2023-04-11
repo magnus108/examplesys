@@ -40,21 +40,22 @@ main port = do
     UI.defaultConfig
       { UI.jsPort = Just port,
         UI.jsStatic = Just "./static",
-        UI.jsCustomHTML = Just "index.html"
+        UI.jsCustomHTML = Just "index.html",
+        UI.jsWindowReloadOnDisconnect = False
       }
     $ \window ->
       do
-        void $
-          mfix
-            ( \env -> Monad.runApp env $ app window config
-            )
-        `NU.catch` \(e :: E.AppException Error.AppError) -> void $ do
-          bob <- UI.string "ups"
-          UI.getBody window #+ [UI.element bob]
+        void $ mdo
+          env <- Monad.runApp env $ app window config
+          return env
+
+--            return env `NU.catch` \(e :: E.AppException Error.AppError) -> gvoid $ do
+--                   bob <- UI.string "ups"
+--                  UI.getBody window #+ [UI.element bob]
 
 type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
 
-app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError m) => UI.Window -> Config.Config -> m (Monad.AppEnv)
+app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError err m, Error.As err Error.AppError) => UI.Window -> Config.Config -> m (Monad.AppEnv)
 app window Config.Config {..} = do
   -- READ
   databaseLoan <- Change.read datastoreLoan
@@ -67,7 +68,7 @@ app window Config.Config {..} = do
   _ <- UI.liftUI $ UI.getBody window #+ [UI.element lol]
 
   -- LISTEN
-  _ <- Change.listen datastoreLoan
+  _ <- Change.listen ""
 
   -- BEHAVIOR
   let eCreate = LoanCreate.eCreate lol
