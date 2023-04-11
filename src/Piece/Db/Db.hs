@@ -7,6 +7,7 @@ module Piece.Db.Db
     readJson,
     readJson2,
     writeJson,
+    writeJson2,
     lookup,
     keys,
     toList,
@@ -20,7 +21,6 @@ import qualified Data.ByteString as BS
 import qualified Data.Map as M
 import GHC.IO.Exception (IOError)
 import qualified Relude.Unsafe as Unsafe
-import System.IO.Error (IOError)
 import Prelude hiding (empty, toList)
 
 type DatabaseKey = Int
@@ -64,3 +64,9 @@ readJson2 fp = liftIO $ try (readJson_ fp)
 
 writeJson :: (MonadIO m, ToJSON a) => FilePath -> a -> m ()
 writeJson fp items = liftIO $ BS.writeFile fp $ toStrict $ encode items
+
+writeJson_ :: ToJSON a => FilePath -> a -> IO ()
+writeJson_ fp items = BS.writeFile fp $ toStrict $ encode items
+
+writeJson2 :: (MonadIO m, ToJSON a) => FilePath -> a -> m (Either IOError ())
+writeJson2 fp items = liftIO $ try $ writeJson_ fp items

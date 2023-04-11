@@ -25,7 +25,8 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ mdo
-      env <- Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config
+      -- ALL errors must be handled
+      env <- UI.liftUI $ Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config
       return env
 
 app ::
@@ -33,7 +34,8 @@ app ::
     MFix.MonadFix m,
     MonadReader r m,
     Env.HasLoanBehavior r,
-    Change.MonadRead m
+    Change.MonadRead m,
+    Change.MonadChanges m
   ) =>
   UI.Window ->
   Config.Config ->
@@ -47,7 +49,7 @@ app window Config.Config {..} = do
   _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element lol]
 
   -- LISTEN
-  -- _ <- Change.listen datastoreLoan
+  _ <- Change.listen datastoreLoan
 
   -- BEHAVIOR
   let eCreate = LoanCreate.eCreate lol
