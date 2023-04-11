@@ -2,6 +2,7 @@ module Piece.CakeSlayer.Monad
   ( App (..),
     runApp,
     runAppAsUI,
+    MonadUnliftUILater (..),
   )
 where
 
@@ -11,7 +12,7 @@ import Control.Monad.Except (MonadError (..), MonadFix)
 import Control.Monad.IO.Unlift (MonadUnliftIO, withRunInIO)
 import GHC.IO.Exception (userError)
 import GHC.IO.Unsafe (unsafeDupableInterleaveIO)
-import Graphics.UI.Threepenny (MonadUI (..), UI, Window, askWindow, runUI)
+import Graphics.UI.Threepenny (MonadUI (..), UI, Window, askWindow, liftIOLater, runUI)
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
 
@@ -28,6 +29,21 @@ newtype App (err :: Type) env a = App
       MonadIO,
       MonadFix
     )
+
+class MonadUnliftUILater m where
+  withRunInUILater :: ((m () -> UI ()) -> UI ()) -> m ()
+
+instance MonadUnliftUILater UI where
+  withRunInUILater inner =
+    inner $ \x -> do
+      window <- askWindow
+      liftIOLater $ runUI window x
+
+instance MonadUnliftUILater (App err env) where
+  withRunInUILater inner = App $
+    ReaderT $ \r ->
+      withRunInUILater $ \run -> do
+        inner (run . runApp r)
 
 instance MonadFail (App err env) where
   fail err = throwM $ userError err

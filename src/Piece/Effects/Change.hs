@@ -15,6 +15,7 @@ import Piece.App.Error (AppError (NotFound), WithError)
 import qualified Piece.App.Monad as Monad
 import Piece.CakeSlayer.Error (catchError, throwError)
 import qualified Piece.CakeSlayer.Has as Has
+import qualified Piece.CakeSlayer.Monad as CakeSlayer
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
@@ -27,11 +28,16 @@ instance MonadChanges Monad.App where
   listen = listenImpl
   {-# INLINE listen #-}
 
-listenImpl :: (UI.MonadUI m, MonadIO m, Env.WithLoanEnv env m) => String -> m ()
+listenImpl :: (CakeSlayer.MonadUnliftUILater m, WithError m, UI.MonadUI m, MonadIO m, Env.WithLoanEnv env m) => String -> m ()
 listenImpl datastoreLoan = do
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
   window <- UI.liftUI UI.askWindow
+  CakeSlayer.withRunInUILater $
+    \x -> x $ liftIO $ R.onChange bDatabaseLoan $ \s ->
+      UI.runUI window $
+        x (throwError NotFound)
+
   UI.liftUI $ UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> UI.runUI window $ do
     Db.writeJson datastoreLoan s
 

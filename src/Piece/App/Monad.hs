@@ -31,6 +31,7 @@ newtype App a = App
       MonadError (ErrorWithSource AppError),
       MonadFix,
       UI.MonadUI,
+      CakeSlayer.MonadUnliftUILater,
       MonadThrow,
       MonadCatch
     )
