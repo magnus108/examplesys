@@ -6,7 +6,8 @@ module Piece.Effects.Change
   )
 where
 
-import Control.Monad.Catch (MonadCatch, tryJust)
+import Control.Monad.Catch (MonadCatch, catch, tryJust)
+import GHC.Exception (throw)
 import GHC.IO.Exception
 import GHC.IO.Exception (IOException (IOError))
 import qualified Graphics.UI.Threepenny.Core as UI
@@ -34,7 +35,8 @@ listenImpl ::
     WithError err m,
     UI.MonadUI m,
     MonadIO m,
-    Env.WithLoanEnv env m
+    Env.WithLoanEnv env m,
+    MonadCatch m
   ) =>
   String ->
   m ()
@@ -42,13 +44,20 @@ listenImpl datastoreLoan = do
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
   window <- UI.liftUI UI.askWindow
-  CakeSlayer.withRunInUILater $
-    \x -> x $ liftIO $ R.onChange bDatabaseLoan $ \s ->
-      UI.runUI window $ do
-        dataWrite <- Db.writeJson2 datastoreLoan s
-        case dataWrite of
-          Left y -> x (throwError (as NotFound))
-          Right y -> return y
+  ( CakeSlayer.withRunInUILater $
+      \x -> do
+        x
+          ( UI.liftUI
+              ( UI.onChanges bDatabaseLoan $ \s -> do
+                  dataWrite <- Db.writeJson2 datastoreLoan s
+                  case dataWrite of
+                    Left y -> liftIO (throw (userError "fucks"))
+                    Right y -> return y
+              )
+              `catchError` (\x -> return ())
+          )
+    )
+    `catch` (\(x :: SomeException) -> traceShowM "fucjer")
 
 class Monad m => MonadRead m where
   read :: String -> m (Db.Database Loan.Loan)

@@ -2,6 +2,7 @@ module Piece.CakeSlayer.Error
   ( WithError,
     ErrorWithSource (..),
     throwError,
+    tryError,
     catchError,
     liftError,
     AppException (..),
@@ -36,6 +37,10 @@ catchError action handler = action `E.catchError` (handler . errorWithSourceType
 liftError :: WithError e m => Either e a -> m a
 liftError = either throwError pure
 {-# INLINE liftError #-}
+
+tryError :: WithError e m => m a -> m (Either e a)
+tryError action = (Right <$> action) `E.catchError` (pure . Left . errorWithSourceType)
+{-# INLINE tryError #-}
 
 newtype SourcePosition = SourcePosition
   { unSourcePosition :: Text
