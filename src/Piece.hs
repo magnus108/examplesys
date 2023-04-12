@@ -61,21 +61,21 @@ main port = do
       void $ do
         z <-
           withMonoidAggregate
-            ( \s -> StateT $ \x -> Monad.runApp s $ do
-                traceShowM "lol"
-                y <- E.tryError $ app window config
-                traceShowM "lol2"
-                return (y, x)
+            ( \(~(l, s)) -> StateT $ \x -> do
+                y <- Monad.runApp s $ E.tryError $ app window config
+                return (y, fromRight x y)
             )
-        traceShowM ("r" ++ (show (isRight z)))
-        traceShowM (isLeft z)
-        when (isLeft z) $ do
-          bob <- UI.liftUI $ UI.string "ups"
-          void $ UI.getBody window #+ [UI.element bob]
+        case z of
+          Left _ -> do
+            bob <- UI.liftUI $ UI.string "ups"
+            void $ UI.getBody window #+ [UI.element bob]
+          Right (e, v) -> do
+            bob <- UI.liftUI $ UI.string "ok"
+            void $ UI.getBody window #+ [UI.element e]
 
         return ()
 
-withMonoidAggregate :: (UI.MonadUI m, MonadFix m) => (Monad.AppEnv -> StateT Monad.AppEnv m r) -> m r
+withMonoidAggregate :: (MonadFix m, UI.MonadUI m) => ((UI.Element, Monad.AppEnv) -> StateT (UI.Element, Monad.AppEnv) m r) -> m r
 withMonoidAggregate f = mdo
   bDatabaseLoan <- UI.liftUI $ R.stepper Db.empty $ Unsafe.head <$> R.unions []
   bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
@@ -102,70 +102,13 @@ withMonoidAggregate f = mdo
                 }
           }
 
-  (output, s) <- runStateT (f s) env
+  defu <- UI.liftUI $ UI.string "defu"
+  (output, s) <- runStateT (f s) (defu, env)
   return output
 
-{-
+type WithDefaults env m = ({-Change.MonadChanges m,-} Change.MonadRead m, Env.WithLoanEnv env m)
 
-        traceShowM "g"
-        let ~(Right r) = x
-        traceShowM "g3"
-        x <- Monad.runApp r $ E.tryError $ app window config
-        traceShowM "g2"
-        if isLeftt x
-          then do
-            traceShowM "g4"
-            bob <- UI.liftUI $ UI.string "ikups"
-            traceShowM "g5"
-            UI.getBody window #+ [UI.element bob]
-          else do
-            traceShowM "g6"
-            bob <- UI.liftUI $ UI.string "ups"
-            traceShowM "g7"
-            UI.getBody window #+ [UI.element bob]
-
-isLeftt :: Either a b -> Bool
-isLeftt (~(Left _)) = True
-isLeftt (~(Right _)) = False
-
-isRightt :: Either a b -> Bool
-isRightt (~(Left _)) = False
-isRightt (~(Right _)) = True
-    -}
-
-{-
-  UI.liftUI $ mdo
-env <- Monad.runApp (fst env) $ do
-  e' <- E.tryError $ app window config
-  case e' of
-    Left _ -> do
-      bob <- UI.liftUI $ UI.string "ups"
-      return (error "fuck", UI.getBody window #+ [UI.element bob])
-    Right e -> do
-      bob <- UI.liftUI $ UI.string "ups"
-      return (e, UI.getBody window #+ [UI.element bob])
-return env
--}
-
--- case runIt of
--- Left y -> do
---  bob <- UI.liftUI $ UI.string "ups"
--- void $ UI.liftUI $ UI.getBody window #+ [UI.element bob]
--- Right y -> return y
-
--- case dataWrite of
---   Left y -> x (throwError (as NotFound))
---  Right y -> return y
---          `E.catchE` ( \(e :: SomeException) -> void $ do
----w                            bob <- UI.liftUI $ UI.string "ups"
---                         UI.liftUI $ UI.getBody window #+ [UI.element bob]
---                     )
-
---            return env `NU.catch` \(e :: E.AppException Error.AppError) -> gvoid $ do
-
-type WithDefaults env m = (Change.MonadChanges m, Change.MonadRead m, Env.WithLoanEnv env m)
-
-app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError err m, Error.As err Error.AppError) => UI.Window -> Config.Config -> m (Monad.AppEnv)
+app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError err m, Error.As err Error.AppError) => UI.Window -> Config.Config -> m (UI.Element, Monad.AppEnv)
 app window Config.Config {..} = do
   -- READ
   traceShowM "lola"
@@ -177,7 +120,6 @@ app window Config.Config {..} = do
   -- Db.readJson datastoreLoan :: IO (Db.Database Loan.Loan)
 
   lol <- LoanCreate.setup
-  _ <- UI.liftUI $ UI.getBody window #+ [UI.element lol]
 
   -- LISTEN
   --  _ <- Change.listen "" `E.catchError` (\x -> return ())
@@ -216,4 +158,4 @@ app window Config.Config {..} = do
                 }
           }
 
-  return env
+  return (UI.getElement lol, env)

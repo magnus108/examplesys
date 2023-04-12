@@ -1,6 +1,6 @@
 module Piece.Effects.Change
-  ( MonadChanges,
-    listen,
+  ( -- MonadChanges,
+    --  listen,
     MonadRead,
     read,
   )
@@ -22,12 +22,12 @@ import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 import System.IO.Error (isDoesNotExistError, isPermissionError)
 
-class Monad m => MonadChanges m where
-  listen :: String -> m ()
+-- class Monad m => MonadChanges m where
+--  listen :: String -> m ()
 
-instance MonadChanges Monad.App where
-  listen = listenImpl
-  {-# INLINE listen #-}
+-- instance MonadChanges Monad.App where
+-- listen = listenImpl
+-- {-# INLINE listen #-}
 
 listenImpl ::
   ( CakeSlayer.MonadUnliftUILater m,

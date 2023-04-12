@@ -10,6 +10,7 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env2 as Env
 import qualified Piece.App.Monad2 as Monad
 import qualified Piece.Config as Config
+import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change2 as Change
 import qualified Piece.Gui.Loan.Create2 as LoanCreate
 import qualified Reactive.Threepenny as R
@@ -26,7 +27,30 @@ main port = do
       }
     $ \window -> void $ mdo
       -- ALL errors must be handled
-      env <- UI.liftUI $ Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config
+      bDatabaseLoan <- UI.liftUI $ R.stepper Db.empty $ Unsafe.head <$> R.unions []
+      bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+
+      -- ENV
+      let defaultEnv =
+            Env.AppBehavior $
+              Env.LoanBehavior
+                { _bDatabaseLoan = bDatabaseLoan,
+                  _bSelectionUser = bSelectionUser,
+                  _bSelectionItem = bSelectionItem,
+                  _bSelectionLoan = bSelectionLoan,
+                  _bFilterUser = bFilterUser,
+                  _bFilterItem = bFilterItem,
+                  _bFilterLoan = bFilterLoan,
+                  _bModalState = bModalState
+                }
+
+      env <- UI.liftUI $ Monad.runApp (fromRight defaultEnv env) $ app window config
       return env
 
 app ::
