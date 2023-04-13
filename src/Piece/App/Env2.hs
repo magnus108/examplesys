@@ -14,6 +14,7 @@ module Piece.App.Env2
     bFilterLoan,
     bModalState,
     HasLoanBehavior,
+    HasAppBehavior,
   )
 where
 
