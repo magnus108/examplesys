@@ -25,14 +25,12 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import TestSuite.Util
 
-type MockApp = App () MockEnv
-
-newtype MockEnv = MockEnv
+data MockEnv (m :: Type -> Type) = MockEnv
   { loanEnv :: Env.LoanEnv
   }
-  deriving (Has Env.LoanEnv) via Field "loanEnv" MockEnv
+  deriving (Has Env.LoanEnv) via Field "loanEnv" (MockEnv m)
 
-mockEnv :: MockEnv
+mockEnv :: MockEnv IO
 mockEnv =
   MockEnv
     { loanEnv =
@@ -48,29 +46,10 @@ mockEnv =
           }
     }
 
-start port mvar = UI.startGUI
-  UI.defaultConfig
-    { UI.jsPort = Just port
-    }
-  $ \window -> void $ do
-    res <- Monad.runApp mockEnv $ do
-      x <- DBLoan.lookup
-      R.currentValue (x <*> pure 0)
-    putMVar mvar res
-
-run :: Int -> IO (Either SomeException ())
-run port = try $ runClient "localhost" port "/websocket" $ \conn -> do
-  return ()
-
 runMockApp :: IO (Maybe Loan.Loan)
-runMockApp = do
-  let port = 8080
-  mvar <- newEmptyMVar
-  server <- forkIO $ start port mvar
-  _ <- retrying retryPolicyDefault (const $ return . isRight) (\_ -> run port)
-  result <- readMVar mvar
-  killThread server
-  return result
+runMockApp = Monad.runApp mockEnv $ do
+  x <- DBLoan.lookup
+  R.currentValue (x <*> pure 0)
 
 tests :: TestTree
 tests =

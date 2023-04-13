@@ -62,7 +62,7 @@ listenImpl datastoreLoan = do
 class Monad m => MonadRead m where
   read :: String -> m (Db.Database Loan.Loan)
 
-instance MonadRead Monad.App where
+instance (MonadIO m, MonadCatch m) => MonadRead (Monad.App m) where
   read = readImpl
   {-# INLINE read #-}
 

@@ -2,7 +2,7 @@ module Piece.App.Monad
   ( App (..),
     AppEnv,
     runApp,
-    runAppAsUI,
+    runAppAsM,
   )
 where
 
@@ -17,27 +17,29 @@ import qualified Piece.App.Monad2
 import Piece.CakeSlayer.Error (ErrorWithSource)
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
 
-type AppEnv = Env App
+type AppEnv m = Env (App m)
 
-newtype App a = App
-  { unApp :: CakeSlayer.App AppError AppEnv a
+newtype App m a = App
+  { unApp :: CakeSlayer.App AppError (AppEnv m) m a
   }
   deriving newtype
     ( Functor,
       Applicative,
       Monad,
       MonadIO,
-      MonadReader AppEnv,
+      MonadReader (AppEnv m),
       MonadError (ErrorWithSource AppError),
       MonadFix,
-      UI.MonadUI,
-      CakeSlayer.MonadUnliftUILater,
       MonadThrow,
       MonadCatch
     )
 
-runApp :: AppEnv -> App a -> UI.UI a
+instance CakeSlayer.MonadUnliftUILater (App UI.UI)
+
+instance UI.MonadUI (App UI.UI)
+
+runApp :: AppEnv m -> App m a -> m a
 runApp env = CakeSlayer.runApp env . unApp
 
-runAppAsUI :: AppEnv -> App a -> UI.UI (Either (ErrorWithSource AppError) a)
-runAppAsUI env = CakeSlayer.runAppAsUI env . unApp
+runAppAsM :: MonadCatch m => AppEnv m -> App m a -> m (Either (ErrorWithSource AppError) a)
+runAppAsM env = CakeSlayer.runAppAsM env . unApp

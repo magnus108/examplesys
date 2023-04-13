@@ -81,14 +81,14 @@ lola (window, config) l@(~((e, ae) : xs)) = WriterT $ do
 -- bob <- UI.liftUI $ UI.string "ok"
 -- void $ UI.getBody window #+ [UI.element e]
 
-withMonoidAggregate :: (MonadFix m) => (UI.Window, Config.Config) -> ((UI.Window, Config.Config) -> [(UI.Element, Monad.AppEnv)] -> WriterT [(UI.Element, Monad.AppEnv)] m r) -> m r
+withMonoidAggregate :: (MonadFix m) => (UI.Window, Config.Config) -> ((UI.Window, Config.Config) -> [(UI.Element, Monad.AppEnv m)] -> WriterT [(UI.Element, Monad.AppEnv m)] m r) -> m r
 withMonoidAggregate args f = mdo
   (output, s) <- runWriterT (f args s)
   return output
 
 type WithDefaults env m = ({-Change.MonadChanges m,-} Change.MonadRead m, Env.WithLoanEnv env m)
 
-app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError err m, Error.As err Error.AppError) => UI.Window -> Config.Config -> m (UI.Element, Monad.AppEnv)
+app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError err m, Error.As err Error.AppError) => UI.Window -> Config.Config -> m (UI.Element, Monad.AppEnv m)
 app window Config.Config {..} = do
   -- READ
   traceShowM "lola"

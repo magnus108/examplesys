@@ -1,7 +1,7 @@
 module Piece.CakeSlayer.Monad
   ( App (..),
     runApp,
-    runAppAsUI,
+    runAppAsM,
     MonadUnliftUILater (..),
   )
 where
@@ -16,8 +16,8 @@ import Graphics.UI.Threepenny (MonadUI (..), UI, Window, askWindow, liftIOLater,
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
 
-newtype App (err :: Type) env a = App
-  { unApp :: ReaderT env UI a
+newtype App (err :: Type) env m a = App
+  { unApp :: ReaderT env m a
   }
   deriving newtype
     ( Functor,
@@ -39,43 +39,43 @@ instance MonadUnliftUILater UI where
       window <- askWindow
       liftIOLater $ runUI window x
 
-instance MonadUnliftUILater (App err env) where
+instance MonadUnliftUILater (App err env UI) where
   withRunInUILater inner = App $
     ReaderT $ \r ->
       withRunInUILater $ \run -> do
         inner (run . runApp r)
 
-instance MonadFail (App err env) where
+instance MonadThrow m => MonadFail (App err env m) where
   fail err = throwM $ userError err
 
-instance MonadUI (App err env) where
+instance MonadUI (App err env UI) where
   liftUI = App . lift . liftUI
 
 instance
-  (Show err, Typeable err) =>
-  MonadError (ErrorWithSource err) (App err env)
+  (Show err, Typeable err, MonadCatch m) =>
+  MonadError (ErrorWithSource err) (App err env m)
   where
-  throwError :: ErrorWithSource err -> App err env a
+  throwError :: ErrorWithSource err -> App err env m a
   throwError = throwM . AppException
   {-# INLINE throwError #-}
 
   catchError ::
-    App err env a ->
-    (ErrorWithSource err -> App err env a) ->
-    App err env a
+    App err env m a ->
+    (ErrorWithSource err -> App err env m a) ->
+    App err env m a
   catchError action handler = App $ ReaderT $ \env -> do
     let ioAction = runApp env action
     ioAction `catch` \(AppException e) -> runApp env $ handler e
   {-# INLINE catchError #-}
 
-runApp :: env -> App err env a -> UI a
+runApp :: env -> App err env m a -> m a
 runApp env = usingReaderT env . unApp
 {-# INLINE runApp #-}
 
-runAppAsUI ::
-  (Show err, Typeable err) =>
+runAppAsM ::
+  (Show err, Typeable err, MonadCatch m) =>
   env ->
-  App err env a ->
-  UI (Either (ErrorWithSource err) a)
-runAppAsUI env = firstF unAppException . try . runApp env
-{-# INLINE runAppAsUI #-}
+  App err env m a ->
+  m (Either (ErrorWithSource err) a)
+runAppAsM env = firstF unAppException . try . runApp env
+{-# INLINE runAppAsM #-}
