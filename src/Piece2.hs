@@ -10,7 +10,6 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env2 as Env
 import qualified Piece.App.Monad2 as Monad
 import qualified Piece.Config as Config
-import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change2 as Change
 import qualified Piece.Gui.Loan.Create2 as LoanCreate
 import qualified Reactive.Threepenny as R
@@ -23,19 +22,14 @@ main port = do
     UI.defaultConfig
       { UI.jsPort = Just port,
         UI.jsStatic = Just "./static",
-        UI.jsCustomHTML = Just "index.html"
+        UI.jsCustomHTML = Just "index.html",
+        UI.jsWindowReloadOnDisconnect = False
       }
     $ \window -> void $ mdo
-      env <- UI.liftUI $ MFix.mfix $ \x -> lol app window config x
-      bob <- UI.liftUI $ UI.string "badman2"
-      void $ UI.getBody window UI.#+ [UI.element bob]
-      return ()
+      result <- MFix.mfix (\env -> Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config)
 
-lol app window config y = case y of
-  ~(Right x) -> do
-    Monad.runApp x (app window config)
-  ~(Left x) -> do
-    return (Left x)
+      whenLeft_ result $ \err -> void $ do
+        UI.getBody window UI.#+ [UI.string (show err)]
 
 app ::
   ( UI.MonadUI m,
@@ -50,22 +44,22 @@ app ::
   m Env.AppBehavior
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Change.read ""
+  databaseLoan <- Change.read datastoreLoan
 
   -- GUI
-  lol <- LoanCreate.setup
-  _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element lol]
+  loanCreate <- LoanCreate.setup
+  _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element loanCreate]
 
   -- LISTEN
-  --  _ <- Change.listen datastoreLoan
+  _ <- Change.listen datastoreLoan
 
   -- BEHAVIOR
-  let eCreate = LoanCreate.eCreate lol
+  let eCreate = LoanCreate.eCreate loanCreate
 
-  let tLoanDatabase = LoanCreate.tDatabaseLoan lol
+  let tLoanDatabase = LoanCreate.tDatabaseLoan loanCreate
   let eLoanDatabase = R.rumors tLoanDatabase
 
-  let tLoanFilter = LoanCreate.tLoanFilter lol
+  let tLoanFilter = LoanCreate.tLoanFilter loanCreate
   let eLoanFilter = R.rumors tLoanFilter
 
   bDatabaseLoan <- UI.liftUI $ R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
