@@ -11,7 +11,7 @@ import qualified Piece.App.Env2 as Env
 import qualified Piece.App.Error2 as Error
 
 newtype App a = App
-  { unApp :: ReaderT Env.AppBehavior (ExceptT Error.AppError UI.UI) a
+  { unApp :: ReaderT Env.AppBehavior (ExceptT Error.AppError IO) a
   }
   deriving newtype
     ( Functor,
@@ -23,8 +23,5 @@ newtype App a = App
       Fix.MonadFix
     )
 
-instance UI.MonadUI App where
-  liftUI = App . lift . lift . UI.liftUI
-
-runApp :: Env.AppBehavior -> App a -> UI.UI (Either Error.AppError a)
+runApp :: Env.AppBehavior -> App a -> IO (Either Error.AppError a)
 runApp env = Except.runExceptT . usingReaderT env . unApp

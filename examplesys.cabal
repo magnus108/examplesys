@@ -13,6 +13,8 @@ common common-all
         , aeson
         , unliftio
         , unliftio-core
+        , monad-control
+        , transformers-base
         , containers
         , threepenny-gui
         , exceptions

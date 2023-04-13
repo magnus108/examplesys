@@ -1,11 +1,14 @@
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Piece2
   ( main,
   )
 where
 
+import Control.Monad.Base
 import qualified Control.Monad.Fix as MFix
+import Control.Monad.Trans.Control
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env2 as Env
 import qualified Piece.App.Monad2 as Monad
@@ -26,18 +29,33 @@ main port = do
         UI.jsWindowReloadOnDisconnect = False
       }
     $ \window -> void $ mdo
-      result <- MFix.mfix (\env -> Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config)
+      return ()
 
-      whenLeft_ result $ \err -> void $ do
-        UI.getBody window UI.#+ [UI.string (show err)]
+{-
+result <- MFix.mfix (\env -> Monad.runApp (Unsafe.fromJust (rightToMaybe env)) $ app window config)
+
+whenLeft_ result $ \err -> void $ do
+  UI.getBody window UI.#+ [UI.string (show err)]
+  -}
+
+gg :: UI.UI a -> ReaderT e UI.UI a
+gg = liftBaseDefault
+
+instance MonadBase UI.UI UI.UI where
+  liftBase = id
+
+instance MonadBaseControl UI.UI UI.UI where
+  type StM UI.UI a = a
+  liftBaseWith f = f id
+  restoreM = return
 
 app ::
   ( UI.MonadUI m,
     MFix.MonadFix m,
     MonadReader r m,
     Env.HasLoanBehavior r,
-    Change.MonadRead m,
-    Change.MonadChanges m
+    Change.MonadRead m
+    -- ,Change.MonadChanges m
   ) =>
   UI.Window ->
   Config.Config ->
@@ -51,7 +69,7 @@ app window Config.Config {..} = do
   _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element loanCreate]
 
   -- LISTEN
-  _ <- Change.listen datastoreLoan
+  -- _ <- Change.listen datastoreLoan
 
   -- BEHAVIOR
   let eCreate = LoanCreate.eCreate loanCreate
