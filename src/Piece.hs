@@ -11,6 +11,7 @@ import qualified Control.Concurrent.Chan as Chan
 import qualified Control.Monad.Catch as NU
 import Control.Monad.Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
+import Control.Monad.Trans.Writer.Lazy
 import qualified Data.ByteString as UI
 import GHC.IO (unsafeInterleaveIO)
 import Graphics.UI.Threepenny.Core ((#), (#+))
@@ -60,50 +61,29 @@ main port = do
     $ \window -> do
       void $ do
         z <-
-          withMonoidAggregate
-            ( \(~(l, s)) -> StateT $ \x -> do
-                y <- Monad.runApp s $ E.tryError $ app window config
-                return (y, fromRight x y)
-            )
-        case z of
-          Left _ -> do
-            bob <- UI.liftUI $ UI.string "ups"
-            void $ UI.getBody window #+ [UI.element bob]
-          Right (e, v) -> do
-            bob <- UI.liftUI $ UI.string "ok"
-            void $ UI.getBody window #+ [UI.element e]
-
+          UI.liftUI $
+            withMonoidAggregate (window, config) lola
         return ()
 
-withMonoidAggregate :: (MonadFix m, UI.MonadUI m) => ((UI.Element, Monad.AppEnv) -> StateT (UI.Element, Monad.AppEnv) m r) -> m r
-withMonoidAggregate f = mdo
-  bDatabaseLoan <- UI.liftUI $ R.stepper Db.empty $ Unsafe.head <$> R.unions []
-  bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+lola _ [] = undefined
+lola (window, config) l@(~((e, ae) : xs)) = WriterT $ do
+  y <- Monad.runApp ae $ E.tryError $ app window config
+  let ll = case y of
+        Left _ -> []
+        Right (x, y) -> undefined
+  return (y, l)
 
-  -- ENV
-  let env =
-        Env.Env
-          { loanEnv =
-              Env.LoanEnv
-                { bDatabaseLoan = bDatabaseLoan,
-                  bSelectionUser = bSelectionUser,
-                  bSelectionItem = bSelectionItem,
-                  bSelectionLoan = bSelectionLoan,
-                  bFilterUser = bFilterUser,
-                  bFilterItem = bFilterItem,
-                  bFilterLoan = bFilterLoan,
-                  bModalState = bModalState
-                }
-          }
+-- case z of
+-- Left _ -> do
+--  bob <- UI.liftUI $ UI.string "ups"
+-- void $ UI.getBody window #+ [UI.element bob]
+-- Right (e, v) -> do
+-- bob <- UI.liftUI $ UI.string "ok"
+-- void $ UI.getBody window #+ [UI.element e]
 
-  defu <- UI.liftUI $ UI.string "defu"
-  (output, s) <- runStateT (f s) (defu, env)
+withMonoidAggregate :: (MonadFix m) => (UI.Window, Config.Config) -> ((UI.Window, Config.Config) -> [(UI.Element, Monad.AppEnv)] -> WriterT [(UI.Element, Monad.AppEnv)] m r) -> m r
+withMonoidAggregate args f = mdo
+  (output, s) <- runWriterT (f args s)
   return output
 
 type WithDefaults env m = ({-Change.MonadChanges m,-} Change.MonadRead m, Env.WithLoanEnv env m)
@@ -112,7 +92,7 @@ app :: (WithDefaults env m, MonadFix m, UI.MonadUI m, Error.WithError err m, Err
 app window Config.Config {..} = do
   -- READ
   traceShowM "lola"
-  databaseLoan <- Change.read ""
+  databaseLoan <- Change.read datastoreLoan
   traceShowM "lola2"
 
   -- GUI

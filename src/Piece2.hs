@@ -26,32 +26,16 @@ main port = do
         UI.jsCustomHTML = Just "index.html"
       }
     $ \window -> void $ mdo
-      -- ALL errors must be handled
-      bDatabaseLoan <- UI.liftUI $ R.stepper Db.empty $ Unsafe.head <$> R.unions []
-      bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-      bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+      env <- UI.liftUI $ MFix.mfix $ \x -> lol app window config x
+      bob <- UI.liftUI $ UI.string "badman2"
+      void $ UI.getBody window UI.#+ [UI.element bob]
+      return ()
 
-      -- ENV
-      let defaultEnv =
-            Env.AppBehavior $
-              Env.LoanBehavior
-                { _bDatabaseLoan = bDatabaseLoan,
-                  _bSelectionUser = bSelectionUser,
-                  _bSelectionItem = bSelectionItem,
-                  _bSelectionLoan = bSelectionLoan,
-                  _bFilterUser = bFilterUser,
-                  _bFilterItem = bFilterItem,
-                  _bFilterLoan = bFilterLoan,
-                  _bModalState = bModalState
-                }
-
-      env <- UI.liftUI $ Monad.runApp (fromRight defaultEnv env) $ app window config
-      return env
+lol app window config y = case y of
+  ~(Right x) -> do
+    Monad.runApp x (app window config)
+  ~(Left x) -> do
+    return (Left x)
 
 app ::
   ( UI.MonadUI m,
@@ -66,14 +50,14 @@ app ::
   m Env.AppBehavior
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Change.read datastoreLoan
+  databaseLoan <- Change.read ""
 
   -- GUI
   lol <- LoanCreate.setup
   _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element lol]
 
   -- LISTEN
-  _ <- Change.listen datastoreLoan
+  --  _ <- Change.listen datastoreLoan
 
   -- BEHAVIOR
   let eCreate = LoanCreate.eCreate lol
