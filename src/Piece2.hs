@@ -33,9 +33,9 @@ main port = do
 
 app ::
   ( UI.MonadUI m,
-    MonadIO m,
     MFix.MonadFix m,
-    MonadReader Env.AppBehavior m,
+    MonadReader r m,
+    Env.HasLoanBehavior r,
     Change.MonadRead m,
     Change.MonadChanges m
   ) =>
@@ -47,8 +47,6 @@ app window Config.Config {..} = do
   databaseLoan <- Change.read datastoreLoan
 
   -- GUI
-  env <- ask -- (undefined :: m Env.AppBehavior)
-  result <- liftIO $ UI.runUI window $ Monad.runApp env $ LoanCreate.setup
   loanCreate <- LoanCreate.setup
   _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element loanCreate]
 
