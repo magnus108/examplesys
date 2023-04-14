@@ -2,10 +2,11 @@ module Piece.Effects.Change2
   ( readImpl,
     Monad,
     MonadRead,
+    go,
     read,
-    listenImpl,
-    MonadChanges,
-    listen,
+    -- listenImpl,
+    -- MonadChanges,
+    -- listen,
   )
 where
 
@@ -20,6 +21,7 @@ import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 
+{-
 class Monad m => MonadChanges m where
   listen :: String -> m ()
 
@@ -42,13 +44,18 @@ listenImpl datastoreLoan = do
   -- VI SKAL LAVE EN KØ DER FIXER DEM HER.
   UI.liftUI $ UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> UI.runUI window $ do
     Db.writeJson datastoreLoan s
+    -}
 
 class Monad m => MonadRead m where
   read :: String -> m (Db.Database Loan.Loan)
+  go :: m ()
 
 instance MonadRead Monad.App where
   read = readImpl
-  {-# INLINE read #-}
+  go = goImpl
+
+goImpl :: (Except.MonadError e m, Error.AsUserError e) => m ()
+goImpl = Except.throwError $ (Error._NotFound LOperators.#) ()
 
 readImpl ::
   ( MonadIO m,
