@@ -6,6 +6,8 @@ version: 1.0.0.0
 common common-all
     build-depends:
         base >=4.16 && <5
+        , monad-control
+        , transformers-base
         , lens
         , stm
         , mtl
@@ -17,11 +19,11 @@ common common-all
         , containers
         , threepenny-gui
         , exceptions
-        , websockets
         , async
         , retry
     other-modules:
         Piece
+        Piece.App.Monad3
         Piece2
         Piece.Db.Loan2
         Piece.Effects.Change2

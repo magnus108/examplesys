@@ -14,7 +14,7 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env as Env
 import Piece.App.Error (AppError (..), As (..), UserError (..), WithError)
 import qualified Piece.App.Monad as Monad
-import Piece.CakeSlayer.Error (catchError, throwError)
+import Piece.CakeSlayer.Error (catchError, throwError, tryError)
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
 import qualified Piece.Core.Loan as Loan
@@ -28,9 +28,10 @@ import System.IO.Error (isDoesNotExistError, isPermissionError)
 -- instance MonadChanges Monad.App where
 -- listen = listenImpl
 -- {-# INLINE listen #-}
+{-
 
 listenImpl ::
-  ( CakeSlayer.MonadUnliftUILater m,
+  (
     As err UserError,
     WithError err m,
     UI.MonadUI m,
@@ -59,22 +60,17 @@ listenImpl datastoreLoan = do
     )
     `catch` (\(x :: SomeException) -> traceShowM "fucjer")
 
+-}
 class Monad m => MonadRead m where
   read :: String -> m (Db.Database Loan.Loan)
 
-instance (MonadIO m, MonadCatch m) => MonadRead (Monad.App m) where
+instance MonadRead Monad.App where
   read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (MonadIO m, As err UserError, WithError err m, MonadCatch m) => String -> m (Db.Database Loan.Loan)
+readImpl :: (MonadIO m, As err UserError, WithError err m) => String -> m (Db.Database Loan.Loan)
 readImpl datastoreLoan = do
-  databaseLoan <- tryJust handleReadFile $ Db.readJson datastoreLoan
+  databaseLoan <- tryError $ Db.readJson datastoreLoan
   case databaseLoan of
     Left x -> throwError (as NotFound)
     Right x -> return x
-  where
-    handleReadFile :: IOError -> Maybe String
-    handleReadFile er
-      | isDoesNotExistError er = Just "readFile: does not exist"
-      | isPermissionError er = Just "readFile: permission denied"
-      | otherwise = Nothing

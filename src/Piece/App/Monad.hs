@@ -2,44 +2,38 @@ module Piece.App.Monad
   ( App (..),
     AppEnv,
     runApp,
-    runAppAsM,
+    runAppAsIO,
   )
 where
 
-import Control.Monad.Catch (MonadCatch, MonadThrow, catch, throwM, try)
 import Control.Monad.Except (MonadError)
-import Control.Monad.Fix
-import Control.Monad.IO.Unlift (MonadUnliftIO)
+import qualified Control.Monad.Fix as Fix
 import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.App.Env (Env)
 import Piece.App.Error (AppError)
-import qualified Piece.App.Monad2
-import Piece.CakeSlayer.Error (ErrorWithSource)
+import Piece.CakeSlayer (ErrorWithSource)
 import qualified Piece.CakeSlayer.Monad as CakeSlayer
+import UnliftIO (MonadUnliftIO)
 
-type AppEnv m = Env (App m)
+type AppEnv = Env App
 
-newtype App m a = App
-  { unApp :: CakeSlayer.App AppError (AppEnv m) m a
+newtype App a = App
+  { unApp :: CakeSlayer.App AppError AppEnv a
   }
   deriving newtype
     ( Functor,
       Applicative,
       Monad,
       MonadIO,
-      MonadReader (AppEnv m),
+      MonadUnliftIO,
+      MonadReader AppEnv,
       MonadError (ErrorWithSource AppError),
-      MonadFix,
-      MonadThrow,
-      MonadCatch
+      Fix.MonadFix,
+      CakeSlayer.MonadUnliftUI
     )
 
-instance CakeSlayer.MonadUnliftUILater (App UI.UI)
-
-instance UI.MonadUI (App UI.UI)
-
-runApp :: AppEnv m -> App m a -> m a
+runApp :: AppEnv -> App a -> IO a
 runApp env = CakeSlayer.runApp env . unApp
 
-runAppAsM :: MonadCatch m => AppEnv m -> App m a -> m (Either (ErrorWithSource AppError) a)
-runAppAsM env = CakeSlayer.runAppAsM env . unApp
+runAppAsIO :: AppEnv -> App a -> IO (Either (ErrorWithSource AppError) a)
+runAppAsIO env = CakeSlayer.runAppAsIO env . unApp

@@ -54,14 +54,27 @@ bListBox bFilterLoan = do
       <*> bShowLoan
       <*> bDatabaseLoan
 
-setup :: (UI.MonadUI m, MonadReader r m, Env.HasLoanBehavior r, MFix.MonadFix m) => m Create
-setup = mdo
-  listBoxLoan <- UI.liftUI $ Widgets.listBox bListBoxLoans (loanBehavior LOperators.^. Env.bSelectionLoan) bDisplayLoan
-  filterLoan <- UI.liftUI $ Widgets.entry (loanBehavior LOperators.^. Env.bFilterLoan)
+canIDoWithMVar :: (MonadIO m) => UI.Window -> UI.UI a -> m a
+canIDoWithMVar window ui = do
+  mvar <- newEmptyMVar
+  s <- liftIO $ UI.runUI window $ do
+    traceShowM "ggg2"
+    res <- ui
+    traceShowM "ggg"
+    UI.liftIOLater $ do
+      traceShowM "ggg11123"
+      putMVar mvar res
+    traceShowM "ggg3"
+  readMVar mvar
 
-  bob <- UI.liftUI $ UI.string "bob"
-  btn <- UI.liftUI $ Elements.button UI.# UI.set UI.children [bob]
-  view <- UI.liftUI $ Elements.div UI.# UI.set UI.children [UI.getElement listBoxLoan, UI.getElement filterLoan, btn]
+setup :: (MonadReader r m, MonadIO m, Env.HasLoanBehavior r, MFix.MonadFix m) => UI.Window -> m Create
+setup window = mdo
+  listBoxLoan <- canIDoWithMVar window $ Widgets.listBox bListBoxLoans (loanBehavior LOperators.^. Env.bSelectionLoan) bDisplayLoan
+  filterLoan <- canIDoWithMVar window $ Widgets.entry (loanBehavior LOperators.^. Env.bFilterLoan)
+
+  bob <- canIDoWithMVar window $ UI.string "bob"
+  btn <- canIDoWithMVar window $ Elements.button UI.# UI.set UI.children [bob]
+  view <- canIDoWithMVar window $ Elements.div UI.# UI.set UI.children [UI.getElement listBoxLoan, UI.getElement filterLoan, btn]
 
   let tLoanSelection = Widgets.userSelection listBoxLoan
   let tLoanFilter = Widgets.userText filterLoan

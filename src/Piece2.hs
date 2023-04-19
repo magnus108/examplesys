@@ -15,6 +15,7 @@ import qualified Piece.App.Env2 as Env
 import qualified Piece.App.Error2 as Error
 import qualified Piece.App.Monad2 as Monad
 import qualified Piece.Config as Config
+import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change2 as Change
 import qualified Piece.Gui.Loan.Create2 as LoanCreate
 import qualified Reactive.Threepenny as R
@@ -31,14 +32,54 @@ main port = do
         UI.jsWindowReloadOnDisconnect = False
       }
     $ \window -> void $ do
-      result <- MFix.mfix (\ ~(Right env) -> Monad.runApp env $ app window config)
+      bDatabaseLoan <- UI.liftUI $ R.stepper Db.empty $ Unsafe.head <$> R.unions []
+      bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+
+      -- ENV
+      let defaultEnv =
+            Env.AppBehavior $
+              Env.LoanBehavior
+                { _bDatabaseLoan = bDatabaseLoan,
+                  _bSelectionUser = bSelectionUser,
+                  _bSelectionItem = bSelectionItem,
+                  _bSelectionLoan = bSelectionLoan,
+                  _bFilterUser = bFilterUser,
+                  _bFilterItem = bFilterItem,
+                  _bFilterLoan = bFilterLoan,
+                  _bModalState = bModalState
+                }
+
+      result <- liftIO $ MFix.mfix (\env -> Monad.runApp (fromRight defaultEnv env) $ app window config)
 
       whenLeft_ result $ \err -> void $ do
         UI.getBody window UI.#+ [UI.string (show err)]
 
+canIDoWithMVar :: (MonadIO m) => UI.Window -> UI.UI a -> m a
+canIDoWithMVar window ui = do
+  traceShowM "gg2"
+  mvar <- newEmptyMVar
+  traceShowM "gg3"
+  s <- liftIO $ UI.runUI window $ do
+    UI.liftIOLater $ UI.runUI window $ do
+      traceShowM "gg4"
+      res <- ui
+      traceShowM "gg5"
+      putMVar mvar res
+      traceShowM "gg6"
+    traceShowM "gg666"
+  traceShowM "gg7a"
+  traceShowM s
+  traceShowM "gg7"
+  readMVar mvar
+
 app ::
-  ( UI.MonadUI m,
-    MonadIO m,
+  ( MonadIO m,
     MFix.MonadFix m,
     MonadReader r m,
     Env.HasLoanBehavior r,
@@ -49,35 +90,37 @@ app ::
   m Env.AppBehavior
 app window Config.Config {..} = do
   -- READ
-  databaseLoan <- Change.read datastoreLoan
-  f <- Change.go
+  -- databaseLoan <- Change.read datastoreLoan
+  -- f <- Change.go
   -- Except.throwError $ (Error._NotFound LOperators.#) ()
 
   -- GUI
-  loanCreate <- LoanCreate.setup
-
-  _ <- UI.liftUI $ UI.getBody window UI.#+ [UI.element loanCreate]
+  traceShowM "heyaa"
+  loanCreate <- LoanCreate.setup window
+  traceShowM "hey"
+  xx <- canIDoWithMVar window $ UI.string "gg"
+  _ <- canIDoWithMVar window $ UI.getBody window UI.#+ [UI.element xx]
 
   -- LISTEN
   -- _ <- Change.listen ""
 
   -- BEHAVIOR
-  let eCreate = LoanCreate.eCreate loanCreate
+  --  let eCreate = LoanCreate.eCreate loanCreate
 
-  let tLoanDatabase = LoanCreate.tDatabaseLoan loanCreate
-  let eLoanDatabase = R.rumors tLoanDatabase
+  -- let tLoanDatabase = LoanCreate.tDatabaseLoan loanCreate
+  -- let eLoanDatabase = R.rumors tLoanDatabase
 
-  let tLoanFilter = LoanCreate.tLoanFilter loanCreate
-  let eLoanFilter = R.rumors tLoanFilter
+  -- let tLoanFilter = LoanCreate.tLoanFilter loanCreate
+  -- let eLoanFilter = R.rumors tLoanFilter
 
-  bDatabaseLoan <- UI.liftUI $ R.stepper databaseLoan $ Unsafe.head <$> R.unions [eLoanDatabase]
-  bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
-  bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+  bDatabaseLoan <- R.stepper Db.empty $ Unsafe.head <$> R.unions [] -- eLoanDatabase]
+  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [] -- eLoanFilter, "coco" <$ eCreate]
+  bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
   -- ENV
   let env =
