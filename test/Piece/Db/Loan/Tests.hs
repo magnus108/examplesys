@@ -5,18 +5,8 @@ module Piece.Db.Loan.Tests
   )
 where
 
-import Control.Concurrent (forkIO, killThread)
-import Control.Concurrent.Async
-import Control.Exception (try)
-import Control.Monad.Fix
-import Control.Retry
-import Graphics.UI.Threepenny (UI)
-import qualified Graphics.UI.Threepenny.Core as UI
-import Network.WebSockets
 import qualified Piece.App.Env as Env
-import Piece.CakeSlayer.Has (Field (..), Has (..), grab)
-import Piece.CakeSlayer.Monad (App, runApp)
-import qualified Piece.CakeSlayer.Monad as Monad
+import qualified Piece.CakeSlayer as CakeSlayer
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as DB
 import qualified Piece.Db.Loan as DBLoan
@@ -28,7 +18,7 @@ import TestSuite.Util
 data MockEnv (m :: Type -> Type) = MockEnv
   { loanEnv :: Env.LoanEnv
   }
-  deriving (Has Env.LoanEnv) via Field "loanEnv" (MockEnv m)
+  deriving (CakeSlayer.Has Env.LoanEnv) via CakeSlayer.Field "loanEnv" (MockEnv m)
 
 mockEnv :: MockEnv IO
 mockEnv =
@@ -47,9 +37,9 @@ mockEnv =
     }
 
 runMockApp :: IO (Maybe Loan.Loan)
-runMockApp = Monad.runApp mockEnv $ do
+runMockApp = CakeSlayer.runApp mockEnv $ do
   x <- DBLoan.lookup
-  R.currentValue (x <*> pure 0)
+  R.currentValue (x ?? 0)
 
 tests :: TestTree
 tests =

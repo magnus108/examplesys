@@ -76,5 +76,13 @@ setup env = mdo
 
   bListBoxLoans <- liftIO $ Monad.runApp env $ bListBox bFilterLoan
 
-  let tDatabaseLoan = R.tidings bDatabaseLoan $ Unsafe.head <$> R.unions [Db.create (Loan.Loan "dadda") <$> bDatabaseLoan R.<@ eCreate]
+  let tDatabaseLoan =
+        R.tidings bDatabaseLoan $
+          Unsafe.head
+            <$> R.unions
+              [ Db.create (Loan.Loan "dadda")
+                  <$> bDatabaseLoan
+                  R.<@ eCreate
+              ]
+
   return Create {..}
