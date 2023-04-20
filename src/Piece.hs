@@ -12,6 +12,7 @@ import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
 import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change as Change
+import qualified Piece.Effects.Read as Read
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -28,7 +29,7 @@ main port = do
       }
     $ \window -> mdo
       -- READ
-      databaseLoan <- liftIO $ Monad.runApp env $ Error.tryError $ Change.read (Config.datastoreLoan config)
+      databaseLoan <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreLoan config)
 
       -- GUI
       content <- UI.string "bob"

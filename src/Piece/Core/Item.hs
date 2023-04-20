@@ -1,6 +1,7 @@
 module Piece.Core.Item
   ( Item,
     name,
+    item,
   )
 where
 
@@ -11,3 +12,6 @@ newtype Item = Item
   }
   deriving stock (Show, Eq, Generic)
   deriving newtype (ToJSON, FromJSON)
+
+item :: String -> Item
+item = Item

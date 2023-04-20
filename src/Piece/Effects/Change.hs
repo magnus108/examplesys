@@ -1,8 +1,5 @@
 module Piece.Effects.Change
-  ( MonadChanges,
-    listen,
-    MonadRead,
-    read,
+  ( MonadChanges (..),
   )
 where
 
@@ -12,7 +9,6 @@ import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.CakeSlayer.Has as Has
-import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 
@@ -36,21 +32,8 @@ listenImpl datastoreLoan = do
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
   Unlift.withRunInIO $ \run -> do
     R.onChange bDatabaseLoan $ \s -> do
+      -- TODO Not idemnpotent. this is good for atleast once read systems. but bad for test
       dataWrite <- Db.writeJson2 datastoreLoan s
       case dataWrite of
         Left _ -> run $ Error.throwError (E.as E.NotFound)
         Right y -> return y
-
-class Monad m => MonadRead m where
-  read :: String -> m (Db.Database Loan.Loan)
-
-instance MonadRead Monad.App where
-  read = readImpl
-  {-# INLINE read #-}
-
-readImpl :: (MonadIO m, E.As err E.UserError, E.WithError err m) => String -> m (Db.Database Loan.Loan)
-readImpl datastoreLoan = do
-  databaseLoan <- Error.tryError $ Db.readJson datastoreLoan
-  case databaseLoan of
-    Left _ -> Error.throwError (E.as E.NotFound)
-    Right x -> return x

@@ -25,7 +25,7 @@ mockEnv =
   MockEnv
     { loanEnv =
         Env.LoanEnv
-          { bDatabaseLoan = pure (DB.create (Loan.Loan "test") DB.empty),
+          { bDatabaseLoan = pure (DB.create (Loan.loan "test") DB.empty),
             bSelectionUser = undefined,
             bSelectionItem = undefined,
             bSelectionLoan = undefined,
@@ -53,5 +53,5 @@ tests =
   where
     lookupLoan = do
       lookup <- runMockApp
-      let value = Just (Loan.Loan "test")
+      let value = Just (Loan.loan "test")
       value @=? lookup

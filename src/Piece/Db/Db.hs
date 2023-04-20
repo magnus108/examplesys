@@ -26,7 +26,7 @@ import Prelude hiding (empty, toList)
 type DatabaseKey = Int
 
 data Database a = Database {nextKey :: !Int, db :: M.Map DatabaseKey a}
-  deriving stock (Show, Generic)
+  deriving stock (Eq, Show, Generic)
   deriving (FromJSON, ToJSON)
 
 empty :: Database a

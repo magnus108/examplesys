@@ -32,12 +32,14 @@ common common-all
         Piece.CakeSlayer.Monad
         Piece.Config
         Piece.Effects.Change
+        Piece.Effects.Read
         Piece.Core.Item
         Piece.Core.Loan
         Piece.Core.User
         Piece.Db.Db
         Piece.Db.Loan
         Piece.Gui.Loan.Create
+        Piece.Gui.Loan.Behavior
 
     mixins:
         base hiding (Prelude)
@@ -87,6 +89,9 @@ test-suite examplesys-test
     other-modules:
         Piece.Core.Item.Tests
         Piece.Db.Loan.Tests
+        Piece.Effects.Change.Tests
+        Piece.Effects.Read.Tests
+        Piece.Gui.Loan.Behavior.Tests
         TestSuite.Util
     hs-source-dirs:
         src, test

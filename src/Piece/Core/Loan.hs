@@ -1,5 +1,6 @@
 module Piece.Core.Loan
-  ( Loan (..),
+  ( Loan,
+    loan,
     name,
   )
 where
@@ -11,3 +12,6 @@ newtype Loan = Loan
   }
   deriving stock (Show, Eq, Generic)
   deriving newtype (ToJSON, FromJSON)
+
+loan :: String -> Loan
+loan = Loan

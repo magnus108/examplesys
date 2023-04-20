@@ -18,7 +18,7 @@ import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
-import qualified Piece.Db.Loan as DbLoan
+import qualified Piece.Gui.Loan.Behavior as Behavior
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 
@@ -32,27 +32,6 @@ data Create = Create
 
 instance UI.Widget Create where
   getElement = view
-
-showLoan :: (Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> String))
-showLoan = do
-  bLookup <- DbLoan.lookup
-  return $ (maybe "" Loan.name .) <$> bLookup
-
-displayLoan :: (Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
-displayLoan = do
-  show <- showLoan
-  return $ (UI.string .) <$> show
-
-bListBox :: (Env.WithLoanEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
-bListBox bFilterLoan = do
-  loanEnv <- Has.grab @Env.LoanEnv
-  let bDatabaseLoan = Env.bDatabaseLoan loanEnv
-  bShowLoan <- showLoan
-  return $
-    (\p display -> filter (p . display) . Db.keys)
-      <$> bFilterLoan
-      <*> bShowLoan
-      <*> bDatabaseLoan
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
@@ -72,15 +51,15 @@ setup env = mdo
 
   loanEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
-  bDisplayLoan <- liftIO $ Monad.runApp env $ displayLoan
+  bDisplayLoan <- liftIO $ Monad.runApp env $ Behavior.displayLoan
 
-  bListBoxLoans <- liftIO $ Monad.runApp env $ bListBox bFilterLoan
+  bListBoxLoans <- liftIO $ Monad.runApp env $ Behavior.bListBox bFilterLoan
 
   let tDatabaseLoan =
         R.tidings bDatabaseLoan $
           Unsafe.head
             <$> R.unions
-              [ Db.create (Loan.Loan "dadda")
+              [ Db.create (Loan.loan "dadda")
                   <$> bDatabaseLoan
                   R.<@ eCreate
               ]

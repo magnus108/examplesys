@@ -1,6 +1,7 @@
 module Piece.Core.User
   ( User,
     name,
+    user,
   )
 where
 
@@ -11,3 +12,6 @@ newtype User = User
   }
   deriving stock (Show, Eq, Generic)
   deriving newtype (ToJSON, FromJSON)
+
+user :: String -> User
+user = User
