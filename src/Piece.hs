@@ -12,6 +12,7 @@ import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
 import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change as Change
+import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 
@@ -32,20 +33,28 @@ main port = do
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-      _ <- UI.getBody window UI.#+ [UI.element content]
+      _ <- UI.getBody window UI.#+ [UI.element content, UI.element loanCreate]
 
       -- LISTEN
       _ <- liftIO $ Monad.runApp env $ Change.listen (Config.datastoreLoan config)
 
       -- BEHAVIOR
-      bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions []
-      bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions []
-      bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
+      let eCreate = LoanCreate.eCreate loanCreate
+
+      let tLoanDatabase = LoanCreate.tDatabaseLoan loanCreate
+      let eLoanDatabase = R.rumors tLoanDatabase
+
+      let tLoanFilter = LoanCreate.tLoanFilter loanCreate
+      let eLoanFilter = R.rumors tLoanFilter
+
+      bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions [eLoanDatabase]
+      bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
+      bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
 
       -- ENV
       let env =

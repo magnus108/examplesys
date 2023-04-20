@@ -6,9 +6,9 @@ module Piece.Effects.Change
   )
 where
 
-import Control.Monad.IO.Unlift (MonadUnliftIO (withRunInIO))
+import qualified Control.Monad.IO.Unlift as Unlift
 import qualified Piece.App.Env as Env
-import Piece.App.Error (AppError (..), As (..), UserError (..), WithError)
+import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.CakeSlayer.Has as Has
@@ -24,9 +24,9 @@ instance MonadChanges Monad.App where
   {-# INLINE listen #-}
 
 listenImpl ::
-  ( As err UserError,
-    WithError err m,
-    MonadUnliftIO m,
+  ( E.As err E.UserError,
+    E.WithError err m,
+    Unlift.MonadUnliftIO m,
     Env.WithLoanEnv env m
   ) =>
   String ->
@@ -34,11 +34,11 @@ listenImpl ::
 listenImpl datastoreLoan = do
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
-  withRunInIO $ \run -> do
+  Unlift.withRunInIO $ \run -> do
     R.onChange bDatabaseLoan $ \s -> do
       dataWrite <- Db.writeJson2 datastoreLoan s
       case dataWrite of
-        Left _ -> run $ Error.throwError (as NotFound)
+        Left _ -> run $ Error.throwError (E.as E.NotFound)
         Right y -> return y
 
 class Monad m => MonadRead m where
@@ -48,9 +48,9 @@ instance MonadRead Monad.App where
   read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (MonadIO m, As err UserError, WithError err m) => String -> m (Db.Database Loan.Loan)
+readImpl :: (MonadIO m, E.As err E.UserError, E.WithError err m) => String -> m (Db.Database Loan.Loan)
 readImpl datastoreLoan = do
   databaseLoan <- Error.tryError $ Db.readJson datastoreLoan
   case databaseLoan of
-    Left _ -> Error.throwError (as NotFound)
+    Left _ -> Error.throwError (E.as E.NotFound)
     Right x -> return x

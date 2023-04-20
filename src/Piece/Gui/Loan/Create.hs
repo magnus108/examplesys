@@ -11,8 +11,10 @@ where
 
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as Elements
+import qualified Graphics.UI.Threepenny.Events as Events
 import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
+import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
@@ -52,11 +54,12 @@ bListBox bFilterLoan = do
       <*> bShowLoan
       <*> bDatabaseLoan
 
-setup :: Env.Env -> UI.UI Create
+setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  listBoxLoan <- Widgets.listBox bListBoxLoans (loanBehavior LOperators.^. Env.bSelectionLoan) bDisplayLoan
-  filterLoan <- Widgets.entry (loanBehavior LOperators.^. Env.bFilterLoan)
-  bob <- UI.string "bob"
+  listBoxLoan <- Widgets.listBox bListBoxLoans (Env.bSelectionLoan loanEnv) bDisplayLoan
+  filterLoan <- Widgets.entry (Env.bFilterLoan loanEnv)
+
+  bob <- UI.string "bob2"
   btn <- Elements.button UI.# UI.set UI.children [bob]
   view <- Elements.div UI.# UI.set UI.children [UI.getElement listBoxLoan, UI.getElement filterLoan, btn]
 
@@ -67,15 +70,11 @@ setup env = mdo
 
   let eCreate = Events.click btn
 
-  r <- ask
-  let loanBehavior = r LOperators.^. Env.loanBehavior
-  let bDatabaseLoan = loanBehavior LOperators.^. Env.bDatabaseLoan
+  loanEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.LoanEnv
+  let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+  bDisplayLoan <- liftIO $ Monad.runApp env $ displayLoan
 
-  bDisplayLoan <- displayLoan
-  bListBoxLoans <- bListBox bFilterLoan
+  bListBoxLoans <- liftIO $ Monad.runApp env $ bListBox bFilterLoan
 
-  let tDatabaseLoan =
-        R.tidings bDatabaseLoan $
-          Unsafe.head <$> R.unions [Db.create (Loan.Loan "dadda") <$> bDatabaseLoan R.<@ eCreate]
-
+  let tDatabaseLoan = R.tidings bDatabaseLoan $ Unsafe.head <$> R.unions [Db.create (Loan.Loan "dadda") <$> bDatabaseLoan R.<@ eCreate]
   return Create {..}
