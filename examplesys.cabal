@@ -23,17 +23,9 @@ common common-all
         , retry
     other-modules:
         Piece
-        Piece.App.Monad3
-        Piece2
-        Piece.Db.Loan2
-        Piece.Effects.Change2
-        Piece.Gui.Loan.Create2
         Piece.App.Env
-        Piece.App.Env2
         Piece.App.Error
-        Piece.App.Error2
         Piece.App.Monad
-        Piece.App.Monad2
         Piece.CakeSlayer
         Piece.CakeSlayer.Error
         Piece.CakeSlayer.Has
@@ -75,7 +67,7 @@ common common-all
         TypeApplications
         ViewPatterns
         DerivingVia
-    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+    ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
 
 library
     import: common-all
@@ -85,6 +77,7 @@ library
 executable examplesys
     import: common-all
     main-is: Main.hs
+    ghc-options: -threaded -rtsopts -with-rtsopts=-N
     hs-source-dirs: app, src
 
 test-suite examplesys-test

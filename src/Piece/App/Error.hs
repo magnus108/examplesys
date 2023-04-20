@@ -13,7 +13,7 @@ type WithError e m = CakeSlayer.WithError e m
 data UserError = NotFound
   deriving stock (Show, Eq)
 
-data AppError = AppUserError UserError | GGerr
+data AppError = AppUserError UserError
   deriving stock (Show, Eq)
 
 instance As AppError UserError where
@@ -28,15 +28,3 @@ instance As AppError AppError where
 class As s a where
   as :: a -> s
   match :: s -> Maybe a
-
--- | Map 'AppError' into a HTTP error code.
--- toHttpError :: CakeSlayer.ErrorWithSource AppError -> Servant.ServerError
--- toHttpError CakeSlayer.ErrorWithSource{..} = case errorWithSourceType of
---   NotFound               -> err404
---  ServerError msg        -> err500 { errBody = encodeUtf8 msg }
--- NotAllowed msg         -> err401 { errBody = encodeUtf8 msg }
--- Invalid msg            -> err417 { errBody = encodeUtf8 msg }
--- MissingHeader name     -> err401 { errBody = toLazy $ "Header not found: " <> foldedCase name }
--- HeaderDecodeError name -> err401 { errBody = encodeUtf8 $ "Unable to decode header: " <> name }
--- DbError e              -> err500 { errBody = encodeUtf8 e }
--- DbNamedError e         -> err500 { errBody = show e }

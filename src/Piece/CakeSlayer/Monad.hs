@@ -1,22 +1,14 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeFamilies #-}
-
 module Piece.CakeSlayer.Monad
   ( App (..),
     runApp,
     runAppAsIO,
-    MonadUnliftUI (..),
   )
 where
 
 import Control.Exception (catch, throwIO, try)
-import Control.Monad.Base
 import Control.Monad.Except (MonadError (..))
 import qualified Control.Monad.Fix as Fix
 import Control.Monad.IO.Unlift (MonadUnliftIO (..))
-import Control.Monad.Trans.Control (MonadBaseControl (..), control, defaultRestoreM)
-import Control.Monad.Trans.Identity (IdentityT (IdentityT))
-import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.CakeSlayer.Error (AppException (..), ErrorWithSource)
 import Relude.Extra.Bifunctor (firstF)
 
@@ -30,35 +22,9 @@ newtype App (err :: Type) env a = App
       MonadFail,
       MonadReader env,
       MonadIO,
-      Fix.MonadFix,
       MonadUnliftIO,
-      MonadUnliftUI
+      Fix.MonadFix
     )
-
-class MonadIO m => MonadUnliftUI m where
-  withRunInUI :: UI.Window -> ((forall a. m a -> UI.UI a) -> UI.UI b) -> m b
-
-instance MonadUnliftUI UI.UI where
-  withRunInUI w inner = inner id
-
-instance MonadUnliftUI IO where
-  withRunInUI w inner = do
-    traceShowM "ui"
-    UI.runUI w $ do
-      traceShowM "ui"
-      inner liftIO
-
-instance MonadUnliftUI m => MonadUnliftUI (ReaderT r m) where
-  withRunInUI w inner =
-    ReaderT $ \r ->
-      withRunInUI w $ \run ->
-        inner (run . flip runReaderT r)
-
-instance MonadUnliftUI m => MonadUnliftUI (IdentityT m) where
-  withRunInUI w inner =
-    IdentityT $
-      withRunInUI w $ \run ->
-        inner (run . runIdentityT)
 
 instance
   (Show err, Typeable err) =>

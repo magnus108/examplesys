@@ -28,8 +28,7 @@ newtype App a = App
       MonadUnliftIO,
       MonadReader AppEnv,
       MonadError (ErrorWithSource AppError),
-      Fix.MonadFix,
-      CakeSlayer.MonadUnliftUI
+      Fix.MonadFix
     )
 
 runApp :: AppEnv -> App a -> IO a
