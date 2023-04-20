@@ -4,22 +4,22 @@ module Piece.Effects.Read
   )
 where
 
+import Data.Aeson (FromJSON)
 import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
-import qualified Piece.Core.Loan as Loan
-import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Json as Json
 
-class Monad m => MonadRead m where
-  read :: String -> m (Db.Database Loan.Loan)
+class (FromJSON a, Monad m) => MonadRead m a where
+  read :: FilePath -> m a
 
-instance MonadRead Monad.App where
+instance FromJSON a => MonadRead Monad.App a where
   read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (MonadIO m, E.As err E.UserError, E.WithError err m) => String -> m (Db.Database Loan.Loan)
+readImpl :: (FromJSON a, E.As err E.UserError, E.WithError err m, Json.MonadReadJson m) => FilePath -> m a
 readImpl datastoreLoan = do
-  databaseLoan <- Error.tryError $ Db.readJson datastoreLoan
+  databaseLoan <- Json.readJson datastoreLoan
   case databaseLoan of
     Left _ -> Error.throwError (E.as E.NotFound)
     Right x -> return x

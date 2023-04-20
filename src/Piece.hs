@@ -37,7 +37,7 @@ main port = do
       _ <- UI.getBody window UI.#+ [UI.element content, UI.element loanCreate]
 
       -- LISTEN
-      _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreLoan config)
+      _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreLoan config) bDatabaseLoan
 
       -- BEHAVIOR
       let eCreate = LoanCreate.eCreate loanCreate

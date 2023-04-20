@@ -4,18 +4,17 @@ module Piece.Effects.Change
 where
 
 import qualified Control.Monad.IO.Unlift as Unlift
-import qualified Piece.App.Env as Env
+import Data.Aeson.Types (ToJSON)
 import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
-import qualified Piece.CakeSlayer.Has as Has
-import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Json as Json
 import qualified Reactive.Threepenny as R
 
-class Monad m => MonadChanges m where
-  listen :: String -> m ()
+class (ToJSON a, Monad m) => MonadChanges m a where
+  listen :: FilePath -> R.Behavior a -> m ()
 
-instance MonadChanges Monad.App where
+instance ToJSON a => MonadChanges Monad.App a where
   listen = listenImpl
   {-# INLINE listen #-}
 
@@ -23,17 +22,17 @@ listenImpl ::
   ( E.As err E.UserError,
     E.WithError err m,
     Unlift.MonadUnliftIO m,
-    Env.WithLoanEnv env m
+    Json.MonadWriteJson m,
+    ToJSON a
   ) =>
-  String ->
+  FilePath ->
+  R.Behavior a ->
   m ()
-listenImpl datastoreLoan = do
-  loanEnv <- Has.grab @Env.LoanEnv
-  let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+listenImpl datastoreLoan bDatabase = do
   Unlift.withRunInIO $ \run -> do
-    R.onChange bDatabaseLoan $ \s -> do
+    R.onChange bDatabase $ \s -> run $ do
       -- TODO Not idemnpotent. this is good for atleast once read systems. but bad for test
-      dataWrite <- Db.writeJson2 datastoreLoan s
+      dataWrite <- Json.writeJson datastoreLoan s
       case dataWrite of
-        Left _ -> run $ Error.throwError (E.as E.NotFound)
+        Left _ -> Error.throwError (E.as E.NotFound)
         Right y -> return y

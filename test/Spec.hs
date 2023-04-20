@@ -4,6 +4,7 @@ module Main
 where
 
 import qualified Piece.Core.Item.Tests
+import qualified Piece.Db.Db.Tests
 import qualified Piece.Db.Loan.Tests
 import qualified Piece.Effects.Change.Tests
 import qualified Piece.Effects.Read.Tests
@@ -19,5 +20,6 @@ main =
         Piece.Db.Loan.Tests.tests,
         Piece.Effects.Change.Tests.tests,
         Piece.Effects.Read.Tests.tests,
-        Piece.Gui.Loan.Behavior.Tests.tests
+        Piece.Gui.Loan.Behavior.Tests.tests,
+        Piece.Db.Db.Tests.tests
       ]

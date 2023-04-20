@@ -5,12 +5,10 @@ module Piece.Effects.Read.Tests
   )
 where
 
-import qualified Control.Monad.IO.Unlift as Unlift
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer as CakeSlayer
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
-import qualified Piece.Effects.Change as Change
 import qualified Piece.Effects.Read as Read
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -44,7 +42,7 @@ mkMockEnv = do
 
 type MockApp = CakeSlayer.App Void (MockEnv IO)
 
-instance Read.MonadRead MockApp where
+instance Read.MonadRead MockApp (Db.Database Loan.Loan) where
   read x = do
     loanEnv <- CakeSlayer.grab @Env.LoanEnv
     let bDatabaseLoan = Env.bDatabaseLoan loanEnv

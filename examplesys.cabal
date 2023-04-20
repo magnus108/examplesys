@@ -22,6 +22,7 @@ common common-all
         , async
         , retry
     other-modules:
+        Piece.Db.Json
         Piece
         Piece.App.Env
         Piece.App.Error
@@ -89,6 +90,7 @@ test-suite examplesys-test
     other-modules:
         Piece.Core.Item.Tests
         Piece.Db.Loan.Tests
+        Piece.Db.Db.Tests
         Piece.Effects.Change.Tests
         Piece.Effects.Read.Tests
         Piece.Gui.Loan.Behavior.Tests

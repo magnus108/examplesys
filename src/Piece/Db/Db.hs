@@ -4,10 +4,7 @@ module Piece.Db.Db
     elems,
     create,
     empty,
-    readJson,
-    readJson2,
-    writeJson,
-    writeJson2,
+    delete,
     lookup,
     keys,
     toList,
@@ -15,12 +12,8 @@ module Piece.Db.Db
   )
 where
 
-import Control.Exception (try)
 import Data.Aeson
-import qualified Data.ByteString as BS
 import qualified Data.Map as M
-import GHC.IO.Exception (IOError)
-import qualified Relude.Unsafe as Unsafe
 import Prelude hiding (empty, toList)
 
 type DatabaseKey = Int
@@ -52,21 +45,3 @@ delete key (Database newkey db) = Database newkey $ M.delete key db
 
 lookup :: DatabaseKey -> Database a -> Maybe a
 lookup key x = M.lookup key (db x)
-
-readJson :: (MonadIO m, FromJSON a) => FilePath -> m a
-readJson fp = liftIO $ Unsafe.fromJust . decode . fromStrict <$> BS.readFile fp
-
-readJson_ :: FromJSON a => FilePath -> IO a
-readJson_ fp = Unsafe.fromJust . decode . fromStrict <$> BS.readFile fp
-
-readJson2 :: (MonadIO m, FromJSON a) => FilePath -> m (Either IOError a)
-readJson2 fp = liftIO $ try (readJson_ fp)
-
-writeJson :: (MonadIO m, ToJSON a) => FilePath -> a -> m ()
-writeJson fp items = liftIO $ BS.writeFile fp $ toStrict $ encode items
-
-writeJson_ :: ToJSON a => FilePath -> a -> IO ()
-writeJson_ fp items = BS.writeFile fp $ toStrict $ encode items
-
-writeJson2 :: (MonadIO m, ToJSON a) => FilePath -> a -> m (Either IOError ())
-writeJson2 fp items = liftIO $ try $ writeJson_ fp items

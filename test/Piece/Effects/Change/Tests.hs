@@ -51,8 +51,8 @@ mkMockEnv = do
 
 type MockApp = CakeSlayer.App Void (MockEnv IO)
 
-instance Change.MonadChanges MockApp where
-  listen x = do
+instance Change.MonadChanges MockApp (Db.Database Loan.Loan) where
+  listen x b = do
     ioRef <- CakeSlayer.grab @(IORef (Db.Database Loan.Loan))
     loanEnv <- CakeSlayer.grab @Env.LoanEnv
     let bDatabaseLoan = Env.bDatabaseLoan loanEnv
@@ -78,7 +78,9 @@ tests =
       result <- runMockApp mockEnv $ do
         h <- CakeSlayer.grab @(R.Handler (Db.Database Loan.Loan -> Db.Database Loan.Loan))
         ioRef <- CakeSlayer.grab @(IORef (Db.Database Loan.Loan))
-        Change.listen ""
+        loanEnv <- CakeSlayer.grab @Env.LoanEnv
+        let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+        Change.listen "" bDatabaseLoan
         liftIO $ h $ Db.create (Loan.loan "1")
         liftIO $ h $ Db.create (Loan.loan "2")
         liftIO $ h $ Db.create (Loan.loan "3")
