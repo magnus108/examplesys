@@ -21,6 +21,7 @@ common common-all
         , exceptions
         , async
         , retry
+        , comonad
     other-modules:
         Piece.Db.Json
         Piece
@@ -38,6 +39,7 @@ common common-all
         Piece.Core.Loan
         Piece.Core.User
         Piece.Db.Db
+        Piece.Db.ListZipper
         Piece.Db.Loan
         Piece.Gui.Loan.Create
         Piece.Gui.Loan.Behavior
@@ -52,6 +54,8 @@ common common-all
     default-extensions:
         ConstraintKinds
         DeriveAnyClass
+        DeriveFoldable
+        DeriveTraversable
         DeriveFunctor
         DeriveGeneric
         DerivingStrategies
