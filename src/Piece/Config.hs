@@ -7,7 +7,8 @@ where
 data Config = Config
   { datastoreLoan :: FilePath,
     datastoreUser :: FilePath,
-    datastoreItem :: FilePath
+    datastoreItem :: FilePath,
+    datastoreTab :: FilePath
   }
 
 load :: Monad m => m Config
@@ -16,5 +17,6 @@ load =
     Config
       { datastoreLoan = "./data/loan.json",
         datastoreUser = "./data/user.json",
-        datastoreItem = "./data/item.json"
+        datastoreItem = "./data/item.json",
+        datastoreTab = "./data/tab.json"
       }

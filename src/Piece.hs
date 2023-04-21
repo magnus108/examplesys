@@ -14,6 +14,7 @@ import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Change as Change
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Gui.Loan.Create as LoanCreate
+import qualified Piece.Gui.Tab.Tab as Tab
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 
@@ -30,14 +31,17 @@ main port = do
     $ \window -> mdo
       -- READ
       databaseLoan <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreLoan config)
+      databaseTab <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreTab config)
 
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-      _ <- UI.getBody window UI.#+ [UI.element content, UI.element loanCreate]
+      tabs <- Tab.setup env
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element content, UI.element loanCreate]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreLoan config) bDatabaseLoan
+      _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreTab config) bDatabaseTab
 
       -- BEHAVIOR
       let eCreate = LoanCreate.eCreate loanCreate
@@ -47,6 +51,8 @@ main port = do
 
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
+
+      bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
 
       bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions [eLoanDatabase]
       bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
@@ -60,7 +66,8 @@ main port = do
       -- ENV
       let env =
             Env.Env
-              { loanEnv =
+              { tabEnv = Env.TabEnv {bDatabaseTab = bDatabaseTab},
+                loanEnv =
                   Env.LoanEnv
                     { bDatabaseLoan = bDatabaseLoan,
                       bSelectionUser = bSelectionUser,

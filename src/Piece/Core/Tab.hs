@@ -1,4 +1,4 @@
-module Piece.Core.Item
+module Piece.Core.Tab
   ( Tab,
     name,
     tab,

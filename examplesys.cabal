@@ -24,11 +24,15 @@ common common-all
         , comonad
     other-modules:
         Piece.Db.Json
+        Piece.Gui.Tab.Behavior
+        Piece.Db.Tab
         Piece
         Piece.App.Env
+        Piece.Gui.Tab.Tab
         Piece.App.Error
         Piece.App.Monad
         Piece.CakeSlayer
+        Piece.Core.Tab
         Piece.CakeSlayer.Error
         Piece.CakeSlayer.Has
         Piece.CakeSlayer.Monad
