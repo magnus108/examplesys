@@ -57,8 +57,8 @@ main port = do
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx]
 
       -- LISTEN
-      _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreLoan config) bDatabaseLoan
-      _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreTab config) bDatabaseTab
+      _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Change.listen (Config.datastoreLoan config) s
+      _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Change.listen (Config.datastoreTab config) s
 
       -- BEHAVIOR
       let eCreate = LoanCreate.eCreate loanCreate
