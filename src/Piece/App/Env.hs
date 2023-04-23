@@ -4,11 +4,14 @@ module Piece.App.Env
   ( Env (..),
     LoanEnv (..),
     TabEnv (..),
+    TimeEnv (..),
     WithLoanEnv,
     WithTabEnv,
+    WithTimeEnv,
   )
 where
 
+import qualified Data.Time.LocalTime as Time
 import Piece.CakeSlayer.Has (Field (..), Has)
 import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Tab as Tab
@@ -17,17 +20,25 @@ import qualified Reactive.Threepenny as R
 
 data Env (m :: Type -> Type) = Env
   { loanEnv :: LoanEnv,
-    tabEnv :: TabEnv
+    tabEnv :: TabEnv,
+    timeEnv :: TimeEnv
   }
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
   deriving (Has TabEnv) via Field "tabEnv" (Env m)
+  deriving (Has TimeEnv) via Field "timeEnv" (Env m)
 
 type WithLoanEnv env m = (MonadReader env m, Has LoanEnv env)
 
 type WithTabEnv env m = (MonadReader env m, Has TabEnv env)
 
+type WithTimeEnv env m = (MonadReader env m, Has TimeEnv env)
+
 data TabEnv = TabEnv
   { bDatabaseTab :: R.Behavior (Database Tab.Tab)
+  }
+
+data TimeEnv = TimeEnv
+  { bTime :: R.Behavior Time.ZonedTime
   }
 
 data LoanEnv = LoanEnv

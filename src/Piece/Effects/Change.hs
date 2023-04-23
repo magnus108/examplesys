@@ -28,9 +28,9 @@ listenImpl ::
   FilePath ->
   R.Behavior a ->
   m ()
-listenImpl datastore behavior = do
+listenImpl datastore bDatabase = do
   Unlift.withRunInIO $ \run -> do
-    R.onChange behavior $ \s -> run $ do
+    R.onChange bDatabase $ \s -> run $ do
       dataWrite <- Json.writeJson datastore s
       case dataWrite of
         Left _ -> Error.throwError (E.as E.NotFound)

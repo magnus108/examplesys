@@ -7,6 +7,7 @@ common common-all
     build-depends:
         base >=4.16 && <5
         , monad-control
+        , time
         , transformers-base
         , lens
         , stm
@@ -38,6 +39,7 @@ common common-all
         Piece.CakeSlayer.Monad
         Piece.Config
         Piece.Effects.Change
+        Piece.Effects.Time
         Piece.Effects.Read
         Piece.Core.Item
         Piece.Core.Loan
@@ -45,6 +47,7 @@ common common-all
         Piece.Db.Db
         Piece.Db.ListZipper
         Piece.Db.Loan
+        Piece.Time.Time
         Piece.Gui.Loan.Create
         Piece.Gui.Loan.Behavior
 
