@@ -29,9 +29,9 @@ data Create = Create
 instance UI.Widget Create where
   getElement = view
 
-setup :: Monad.AppEnv -> UI.UI Create
-setup env = mdo
-  zipperBoxTab <- zipperBox bListBoxTabs bDisplayTab
+setup :: Monad.AppEnv -> [(Int, UI.UI UI.Element)] -> UI.UI Create
+setup env map = mdo
+  zipperBoxTab <- zipperBox bListBoxTabs bDisplayTab (pure (\x -> Unsafe.fromJust $ Map.lookup x (Map.fromList map)))
   view <- UI.div UI.# UI.set UI.children [UI.getElement zipperBoxTab]
 
   let bFilterTab = pure (const True)
@@ -53,10 +53,12 @@ zipperBox ::
   Ord a =>
   UI.Behavior [a] ->
   UI.Behavior (a -> UI.UI UI.Element) ->
+  UI.Behavior (a -> UI.UI UI.Element) ->
   UI.UI (ZipperBox a)
-zipperBox bitems bdisplay = mdo
+zipperBox bitems bdisplay bdisplay2 = mdo
   (eClick, hClick) <- liftIO R.newEvent
 
+  content <- UI.div
   start <- UI.div UI.#. "navbar-start"
   nav <-
     UI.mkElement "nav"
@@ -69,11 +71,15 @@ zipperBox bitems bdisplay = mdo
   bZipperBoxTabs <- R.stepper (Unsafe.fromJust $ LZ.fromList [0 ..]) $ Unsafe.head <$> R.unions [eClick]
 
   let bContent = fmap <$> bdisplay <*> bitems
+  let bContent2 = fmap <$> bdisplay2 <*> bitems
       bButtons = LZ.toList . mkButton hClick <$> bZipperBoxTabs
+      bButtons2 = extract <$> bZipperBoxTabs
 
   UI.element start UI.# UI.sink items (zip <$> bButtons <*> bContent)
+  UI.element content UI.# UI.sink items2 (Unsafe.at <$> bButtons2 <*> bContent2)
 
-  let _elementZB = nav
+  x <- UI.div UI.#+ [UI.element nav, UI.element content]
+  let _elementZB = x
 
   return ZipperBox {..}
 
@@ -94,3 +100,7 @@ mkButton hClick lz =
 items :: UI.WriteAttr UI.Element [(UI.UI UI.Element, UI.UI UI.Element)]
 items = UI.mkWriteAttr $ \i x -> void $ do
   return x UI.# UI.set UI.children [] UI.#+ map (\(button, content) -> button UI.#+ [content]) i
+
+items2 :: UI.WriteAttr UI.Element (UI.UI UI.Element)
+items2 = UI.mkWriteAttr $ \i x -> void $ do
+  return x UI.# UI.set UI.children [] UI.#+ [i]

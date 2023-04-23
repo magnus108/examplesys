@@ -36,8 +36,8 @@ main port = do
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-      tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element content, UI.element loanCreate]
+      tabs <- Tab.setup env [(0, UI.element loanCreate), (1, UI.element content), (2, UI.element content), (3, UI.element content)]
+      _ <- UI.getBody window UI.#+ [UI.element tabs]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ Change.listen (Config.datastoreLoan config) bDatabaseLoan
