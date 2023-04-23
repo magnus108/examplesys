@@ -1,7 +1,7 @@
 module Piece.Gui.Tab.Behavior
   ( showTab,
     displayTab,
-    bListBox,
+    bZipperBox,
   )
 where
 
@@ -26,14 +26,13 @@ displayTab = do
   show <- showTab
   return $ (UI.string .) <$> show
 
-bListBox :: (Env.WithTabEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior (LZ.ListZipper Db.DatabaseKey))
-bListBox bFilterTab = do
+bZipperBox :: (Env.WithTabEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
+bZipperBox bFilterTab = do
   tabEnv <- Has.grab @Env.TabEnv
   let bDatabaseTab = Env.bDatabaseTab tabEnv
   bShowTab <- showTab
   return $
-    fmap (Unsafe.fromJust . LZ.fromList) $
-      (\p display -> filter (p . display) . Db.keys)
-        <$> bFilterTab
-        <*> bShowTab
-        <*> bDatabaseTab
+    (\p display -> filter (p . display) . Db.keys)
+      <$> bFilterTab
+      <*> bShowTab
+      <*> bDatabaseTab

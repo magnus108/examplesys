@@ -8,6 +8,9 @@ module Piece.Db.ListZipper
     rights,
     singleton,
     setFocus,
+    mapFocus,
+    mapLefts,
+    mapRights,
   )
 where
 
@@ -32,6 +35,15 @@ instance Comonad ListZipper where
 
 setFocus :: a -> ListZipper a -> ListZipper a
 setFocus y (ListZipper ls _ rs) = listZipper ls y rs
+
+mapFocus :: (a -> a) -> ListZipper a -> ListZipper a
+mapFocus f (ListZipper ls x rs) = listZipper ls (f x) rs
+
+mapLefts :: (a -> a) -> ListZipper a -> ListZipper a
+mapLefts f (ListZipper ls x rs) = listZipper (fmap f ls) x rs
+
+mapRights :: (a -> a) -> ListZipper a -> ListZipper a
+mapRights f (ListZipper ls x rs) = listZipper ls x (fmap f rs)
 
 singleton :: a -> ListZipper a
 singleton x = listZipper [] x []

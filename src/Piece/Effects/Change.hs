@@ -28,11 +28,10 @@ listenImpl ::
   FilePath ->
   R.Behavior a ->
   m ()
-listenImpl datastoreLoan bDatabase = do
+listenImpl datastore behavior = do
   Unlift.withRunInIO $ \run -> do
-    R.onChange bDatabase $ \s -> run $ do
-      -- TODO Not idemnpotent. this is good for atleast once read systems. but bad for test
-      dataWrite <- Json.writeJson datastoreLoan s
+    R.onChange behavior $ \s -> run $ do
+      dataWrite <- Json.writeJson datastore s
       case dataWrite of
         Left _ -> Error.throwError (E.as E.NotFound)
         Right y -> return y

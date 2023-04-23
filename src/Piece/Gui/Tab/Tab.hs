@@ -2,8 +2,6 @@
 
 module Piece.Gui.Tab.Tab
   ( setup,
-    tListZipperTab,
-    tTabFilter,
     Create,
   )
 where
@@ -25,9 +23,7 @@ import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 
 data Create = Create
-  { view :: UI.Element,
-    tListZipperTab :: R.Tidings (ListZipper.ListZipper Tab.Tab),
-    tTabFilter :: R.Tidings Bool
+  { view :: UI.Element
   }
 
 instance UI.Widget Create where
@@ -35,80 +31,59 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  listBoxTab <- zipperBox bListBoxTabs bDisplayTab
-  view <- UI.div UI.# UI.set UI.children [UI.getElement listBoxTab]
+  zipperBoxTab <- zipperBox bListBoxTabs bDisplayTab
+  view <- UI.div UI.# UI.set UI.children [UI.getElement zipperBoxTab]
 
   let bFilterTab = pure (const True)
   tabEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.TabEnv
-  let bDatabaseTab = Env.bDatabaseTab tabEnv
   bDisplayTab <- liftIO $ Monad.runApp env $ Behavior.displayTab
-  bListBoxTabs <- liftIO $ Monad.runApp env $ Behavior.bListBox bFilterTab
 
-  let tDatabaseLoan =
-        R.tidings bDatabaseTab $
-          Unsafe.head
-            <$> R.unions
-              []
+  bListBoxTabs <- liftIO $ Monad.runApp env $ Behavior.bZipperBox bFilterTab
 
   return Create {..}
 
 data ZipperBox a = ZipperBox
-  { _elementZB :: UI.Element,
-    _selectionZB :: R.Tidings (LZ.ListZipper a)
+  { _elementZB :: UI.Element
   }
 
 instance UI.Widget (ZipperBox a) where getElement = _elementZB
 
-userSelection :: (ZipperBox a) -> R.Tidings (LZ.ListZipper a)
-userSelection = _selectionZB
-
 zipperBox ::
-  UI.Behavior (LZ.ListZipper a) ->
+  forall a.
+  Ord a =>
+  UI.Behavior [a] ->
   UI.Behavior (a -> UI.UI UI.Element) ->
   UI.UI (ZipperBox a)
-zipperBox bitems bdisplay = do
-  nav <- navBox bdisplay
+zipperBox bitems bdisplay = mdo
+  (eClick, hClick) <- liftIO R.newEvent
 
-  UI.sink items bitems (return nav)
+  nav <- UI.div
 
-  --  UI.element nav UI.# UI.sink UI.selection bindex
+  bZipperBoxTabs <- R.stepper (Unsafe.fromJust $ LZ.fromList [0 ..]) $ Unsafe.head <$> R.unions [eClick]
 
-  let _selectionZB =
-        UI.tidings bitems (_click nav)
-      _elementZB = (UI.getElement nav)
+  let bContent = fmap <$> bdisplay <*> bitems
+      bButtons = LZ.toList . mkButton hClick <$> bZipperBoxTabs
+
+  UI.element nav UI.# UI.sink items (zip <$> bButtons <*> bContent)
+
+  let _elementZB = nav
 
   return ZipperBox {..}
 
-data NavBox a = NavBox
-  { _elementNav :: UI.Element,
-    _handler :: R.Handler (LZ.ListZipper a),
-    _click :: R.Event (LZ.ListZipper a),
-    _display :: R.Behavior (a -> UI.UI UI.Element)
-  }
+mkButton :: R.Handler (LZ.ListZipper Int) -> LZ.ListZipper Int -> LZ.ListZipper (UI.UI UI.Element)
+mkButton hClick lz =
+  extend
+    ( \wa -> do
+        button <- UI.button
+        UI.on UI.click button $ \_ -> void $ do
+          liftIO $ hClick wa
+        return button
+    )
+    lz
+    & LZ.mapFocus (UI.#. "navbar-item is-active")
+    & LZ.mapLefts (UI.#. "navbar-item")
+    & LZ.mapRights (UI.#. "navbar-item")
 
-instance UI.Widget (NavBox a) where getElement = _elementNav
-
-navBox :: UI.Behavior (a -> UI.UI UI.Element) -> UI.UI (NavBox a)
-navBox bdisplay = do
-  (eClick, hClick) <- liftIO R.newEvent
-  nav <- UI.div
-  let _elementNav = nav
-  return NavBox {..}
-
-items :: UI.WriteAttr (NavBox a) (LZ.ListZipper a)
-items = items' _handler _display
-
-items' :: (NavBox a -> R.Handler (LZ.ListZipper a)) -> R.Behavior (a -> UI.UI UI.Element) -> UI.WriteAttr (NavBox a) (LZ.ListZipper a)
-items' f d = UI.mkWriteAttr $ \i x -> void $ do
-  UI.element x
-    UI.# UI.set UI.children []
-    UI.#+ LZ.toList
-      ( extend
-          ( \wa -> do
-              button <- UI.button UI.#+ [extract wa]
-              UI.on UI.click button $ \_ -> void $ do
-                liftIO $ f x wa
-              return button
-          )
-          i
-      )
+items :: UI.WriteAttr UI.Element [(UI.UI UI.Element, UI.UI UI.Element)]
+items = UI.mkWriteAttr $ \i x -> void $ do
+  return x UI.# UI.set UI.children [] UI.#+ map (\(button, content) -> button UI.#+ [content]) i

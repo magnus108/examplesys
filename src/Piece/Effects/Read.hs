@@ -18,8 +18,8 @@ instance FromJSON a => MonadRead Monad.App a where
   {-# INLINE read #-}
 
 readImpl :: (FromJSON a, E.As err E.UserError, E.WithError err m, Json.MonadReadJson m) => FilePath -> m a
-readImpl datastoreLoan = do
-  databaseLoan <- Json.readJson datastoreLoan
-  case databaseLoan of
+readImpl datastore = do
+  datastore' <- Json.readJson datastore
+  case datastore' of
     Left _ -> Error.throwError (E.as E.NotFound)
     Right x -> return x
