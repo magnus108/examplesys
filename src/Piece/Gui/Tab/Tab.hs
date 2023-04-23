@@ -57,14 +57,21 @@ zipperBox ::
 zipperBox bitems bdisplay = mdo
   (eClick, hClick) <- liftIO R.newEvent
 
-  nav <- UI.div
+  start <- UI.div UI.#. "navbar-start"
+  nav <-
+    UI.mkElement "nav"
+      UI.#. "navbar is-dark"
+      UI.#+ [ UI.div
+                UI.#. "navbar-menu"
+                UI.#+ [UI.element start]
+            ]
 
   bZipperBoxTabs <- R.stepper (Unsafe.fromJust $ LZ.fromList [0 ..]) $ Unsafe.head <$> R.unions [eClick]
 
   let bContent = fmap <$> bdisplay <*> bitems
       bButtons = LZ.toList . mkButton hClick <$> bZipperBoxTabs
 
-  UI.element nav UI.# UI.sink items (zip <$> bButtons <*> bContent)
+  UI.element start UI.# UI.sink items (zip <$> bButtons <*> bContent)
 
   let _elementZB = nav
 
@@ -74,7 +81,7 @@ mkButton :: R.Handler (LZ.ListZipper Int) -> LZ.ListZipper Int -> LZ.ListZipper 
 mkButton hClick lz =
   extend
     ( \wa -> do
-        button <- UI.button
+        button <- UI.a
         UI.on UI.click button $ \_ -> void $ do
           liftIO $ hClick wa
         return button
