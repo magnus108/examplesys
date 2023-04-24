@@ -13,7 +13,6 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
 import qualified Graphics.UI.Threepenny.Events as UI
 import qualified Graphics.UI.Threepenny.Timer as UI
-import Piece.App.Env (TabEnv (bViewMapTab))
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad

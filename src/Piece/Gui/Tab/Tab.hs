@@ -103,3 +103,68 @@ items = UI.mkWriteAttr $ \i x -> void $ do
 items2 :: UI.WriteAttr UI.Element (UI.UI UI.Element)
 items2 = UI.mkWriteAttr $ \i x -> void $ do
   return x UI.# UI.set UI.children [] UI.#+ [i]
+
+zipperBox2 ::
+  forall a.
+  UI.Behavior [a] ->
+  UI.Behavior (a -> UI.UI UI.Element) ->
+  UI.Behavior (a -> UI.UI UI.Element) ->
+  UI.UI (ViewBox a)
+zipperBox2 bitems viewButton viewTab = mdo
+  view <- viewBox
+
+  bzipper <- R.stepper (Unsafe.fromJust $ LZ.fromList [0 ..]) $ Unsafe.head <$> R.unions [eClick]
+
+  let bindicies :: UI.Behavior (Map.Map Int a)
+      bindicies = Map.fromList . zip [0 ..] <$> bitems
+      what :: _
+      what = (\z m -> fmap (\x -> Map.lookup x m) z) <$> bzipper <*> bindicies
+
+  _ <- return view
+  -- UI.# UI.sink items' bitems
+  -- UI.# UI.sink butts bitems
+  -- UI.# UI.sink views bitems
+  -- UI.# UI.sink zipper zipper
+
+  let eClick = _click view
+  return undefined -- view
+
+data ViewBox a = ViewBox
+  { _content :: UI.Element,
+    _nav :: UI.Element,
+    _click :: UI.Event (LZ.ListZipper a),
+    _handler :: UI.Handler (LZ.ListZipper a)
+  }
+
+viewBox :: UI.UI (ViewBox a)
+viewBox = mdo
+  _content <- UI.div
+  _nav <- UI.div
+
+  (eClick, hClick) <- liftIO R.newEvent
+  let _click = eClick
+      _handler = hClick
+
+  return ViewBox {..}
+
+views :: UI.WriteAttr (ViewBox a) [UI.UI UI.Element]
+views = UI.mkWriteAttr $ \i x -> void $ do
+  return (_content x) UI.# UI.set UI.children [] UI.#+ i
+
+butts :: UI.WriteAttr (ViewBox a) [UI.UI UI.Element]
+butts = UI.mkWriteAttr $ \i x -> void $ do
+  return (_nav x) UI.# UI.set UI.children [] UI.#+ map (\i -> do UI.button UI.#+ [i]) i
+
+mkButton2 :: R.Handler (LZ.ListZipper Int) -> LZ.ListZipper Int -> UI.UI UI.Element -> LZ.ListZipper (UI.UI UI.Element)
+mkButton2 hClick lz content =
+  extend
+    ( \wa -> do
+        button <- UI.a UI.#+ [content]
+        UI.on UI.click button $ \_ -> void $ do
+          liftIO $ hClick wa
+        return button
+    )
+    lz
+    & LZ.mapFocus (UI.#. "navbar-item is-active")
+    & LZ.mapLefts (UI.#. "navbar-item")
+    & LZ.mapRights (UI.#. "navbar-item")
