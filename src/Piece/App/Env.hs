@@ -11,7 +11,9 @@ module Piece.App.Env
   )
 where
 
+import qualified Data.Map as Map
 import qualified Data.Time.LocalTime as Time
+import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.CakeSlayer.Has (Field (..), Has)
 import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Tab as Tab
@@ -34,7 +36,8 @@ type WithTabEnv env m = (MonadReader env m, Has TabEnv env)
 type WithTimeEnv env m = (MonadReader env m, Has TimeEnv env)
 
 data TabEnv = TabEnv
-  { bDatabaseTab :: R.Behavior (Database Tab.Tab)
+  { bDatabaseTab :: R.Behavior (Database Tab.Tab),
+    bViewMapTab :: R.Behavior (Map.Map DatabaseKey (UI.UI UI.Element))
   }
 
 data TimeEnv = TimeEnv

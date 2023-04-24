@@ -5,6 +5,7 @@ module Piece
   )
 where
 
+import qualified Data.Map as Map
 import qualified Data.Time.Format as Time
 import qualified Data.Time.LocalTime as Time
 import qualified Graphics.UI.Threepenny.Attributes as UI
@@ -12,6 +13,7 @@ import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
 import qualified Graphics.UI.Threepenny.Events as UI
 import qualified Graphics.UI.Threepenny.Timer as UI
+import Piece.App.Env (TabEnv (bViewMapTab))
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
@@ -50,10 +52,10 @@ main port = do
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-
       xx <- UI.div UI.# UI.sink UI.text ((Time.formatTime Time.defaultTimeLocale "%F, %T") <$> bTime)
+
       -- TODO fixthislist
-      tabs <- Tab.setup env [(0, UI.element loanCreate), (1, UI.element content), (2, UI.element content), (3, UI.element content)]
+      tabs <- Tab.setup env
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx]
 
       -- LISTEN
@@ -72,6 +74,16 @@ main port = do
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimer]
 
       bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
+      bViewMapTab <-
+        R.stepper
+          ( Map.fromList
+              [ (0, UI.element loanCreate),
+                (1, UI.element content),
+                (2, UI.element content),
+                (3, UI.element content)
+              ]
+          )
+          $ Unsafe.head <$> R.unions []
 
       bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions [eLoanDatabase]
       bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
@@ -85,7 +97,11 @@ main port = do
       -- ENV
       let env =
             Env.Env
-              { tabEnv = Env.TabEnv {bDatabaseTab = bDatabaseTab},
+              { tabEnv =
+                  Env.TabEnv
+                    { bDatabaseTab = bDatabaseTab,
+                      bViewMapTab = bViewMapTab
+                    },
                 timeEnv = Env.TimeEnv {bTime = bTime},
                 loanEnv =
                   Env.LoanEnv

@@ -29,15 +29,14 @@ data Create = Create
 instance UI.Widget Create where
   getElement = view
 
-setup :: Monad.AppEnv -> [(Int, UI.UI UI.Element)] -> UI.UI Create
-setup env map = mdo
-  zipperBoxTab <- zipperBox bListBoxTabs bDisplayTab (pure (\x -> Unsafe.fromJust $ Map.lookup x (Map.fromList map)))
+setup :: Monad.AppEnv -> UI.UI Create
+setup env = mdo
+  zipperBoxTab <- zipperBox bListBoxTabs bDisplayButtonTab bDisplayViewTab
   view <- UI.div UI.# UI.set UI.children [UI.getElement zipperBoxTab]
 
   let bFilterTab = pure (const True)
-  tabEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.TabEnv
-  bDisplayTab <- liftIO $ Monad.runApp env $ Behavior.displayTab
-
+  bDisplayButtonTab <- liftIO $ Monad.runApp env $ Behavior.displayButtonTab
+  bDisplayViewTab <- liftIO $ Monad.runApp env $ Behavior.displayViewTab
   bListBoxTabs <- liftIO $ Monad.runApp env $ Behavior.bZipperBox bFilterTab
 
   return Create {..}
