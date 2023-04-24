@@ -85,13 +85,13 @@ main port = do
           $ Unsafe.head <$> R.unions []
 
       bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions [eLoanDatabase]
-      bSelectionUser <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionItem <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionLoan <- UI.liftUI $ R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bFilterUser <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterItem <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterLoan <- UI.liftUI $ R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
-      bModalState <- UI.liftUI $ R.stepper False $ Unsafe.head <$> R.unions []
+      bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+      bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
+      bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
+      bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
       -- ENV
       let env =
