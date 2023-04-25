@@ -29,6 +29,7 @@ common common-all
         Piece.Gui.Tab.Behavior
         Piece.Db.Tab
         Piece
+        Piece.Core.Role
         Piece.App.Env
         Piece.Gui.Tab.Tab
         Piece.App.Error

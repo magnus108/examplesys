@@ -7,6 +7,7 @@ where
 data Config = Config
   { datastoreLoan :: FilePath,
     datastoreUser :: FilePath,
+    datastoreRole :: FilePath,
     datastoreItem :: FilePath,
     datastoreTab :: FilePath
   }
@@ -17,6 +18,7 @@ load =
     Config
       { datastoreLoan = "./data/loan.json",
         datastoreUser = "./data/user.json",
+        datastoreRole = "./data/role.json",
         datastoreItem = "./data/item.json",
         datastoreTab = "./data/tab.json"
       }

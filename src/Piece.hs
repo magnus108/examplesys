@@ -43,6 +43,8 @@ main port = do
       -- READ
       databaseLoan <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreLoan config)
       databaseTab <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreTab config)
+      databaseRole <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreRole config)
+      databaseUser <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreUser config)
 
       -- TIMER
       time <- liftIO $ Monad.runApp env $ Error.tryError Time.time
@@ -93,6 +95,9 @@ main port = do
       bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
       bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
+      bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
+      bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions []
+
       -- ENV
       let env =
             Env.Env
@@ -112,7 +117,9 @@ main port = do
                       bFilterItem = bFilterItem,
                       bFilterLoan = bFilterLoan,
                       bModalState = bModalState
-                    }
+                    },
+                roleEnv = Env.RoleEnv {bDatabaseRole = bDatabaseRole},
+                userEnv = Env.UserEnv {bDatabaseUser = bDatabaseUser}
               }
 
       -- RETURN

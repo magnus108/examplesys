@@ -2,16 +2,21 @@ module Piece.Core.User
   ( User,
     name,
     user,
+    password,
+    roles,
   )
 where
 
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Piece.Core.Role as Role
 
-newtype User = User
-  { name :: String
+data User = User
+  { name :: String,
+    password :: String,
+    roles :: [Role.Role]
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToJSON, FromJSON)
+  deriving (ToJSON, FromJSON)
 
-user :: String -> User
+user :: String -> String -> [Role.Role] -> User
 user = User
