@@ -173,6 +173,7 @@ viewBox = mdo
 
   return ViewBox {..}
 
+-- FLYT UD I normal view og så attach handler senere.
 items' :: UI.Attr ViewBox [UI.UI UI.Element]
 items' = UI.mkReadWriteAttr (readTVarIO . _buttons) $ \i x -> void $ do
   let btns =

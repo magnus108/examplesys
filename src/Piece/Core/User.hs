@@ -13,10 +13,10 @@ import qualified Piece.Core.Role as Role
 data User = User
   { name :: String,
     password :: String,
-    roles :: [Role.Role]
+    roles :: [Int]
   }
   deriving stock (Show, Eq, Generic)
   deriving (ToJSON, FromJSON)
 
-user :: String -> String -> [Role.Role] -> User
+user :: String -> String -> [Int] -> User
 user = User

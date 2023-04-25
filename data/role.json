@@ -1,1 +1,1 @@
-{"db":{"0":"admin"},"nextKey":1}
+{"db":{"0":{"name":"admin", "privilege":[0]}},"nextKey":1}

@@ -6,11 +6,12 @@ where
 
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype Role = Role
-  { name :: String
+data Role = Role
+  { name :: String,
+    privilege :: [Int]
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToJSON, FromJSON)
+  deriving (ToJSON, FromJSON)
 
-role :: String -> Role
+role :: String -> [Int] -> Role
 role = Role
