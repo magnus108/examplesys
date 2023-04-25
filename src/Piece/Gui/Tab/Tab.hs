@@ -6,7 +6,7 @@ module Piece.Gui.Tab.Tab
   )
 where
 
-import Data.List.Index (imap)
+import Data.List.Index (iforM, imap)
 import qualified Data.Map as Map
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
@@ -85,8 +85,8 @@ tabBox bitems bsel bdisplay = mdo
 data ViewBox = ViewBox
   { _content :: UI.Element,
     _nav :: UI.Element,
-    _buttons :: TVar [UI.UI UI.Element],
-    _selection :: TVar (Maybe Int),
+    _hButtons :: UI.Handler [UI.UI UI.Element],
+    _hSelection :: UI.Handler (Maybe Int),
     _eClick :: R.Event (Maybe Int),
     _hClick :: R.Handler (Maybe Int)
   }
@@ -97,11 +97,30 @@ instance UI.Widget ViewBox where
 viewBox :: UI.UI ViewBox
 viewBox = mdo
   (_eClick, _hClick) <- liftIO R.newEvent
+  (_eSelection, _hSelection) <- liftIO R.newEvent
+  (_eButtons, _hButtons) <- liftIO R.newEvent
 
-  _buttons <- liftIO $ newTVarIO []
-  _selection <- liftIO $ newTVarIO Nothing
+  _bButtons <- UI.stepper [] $ Unsafe.head <$> R.unions [_eButtons]
+  _bSelection <- UI.stepper Nothing $ Unsafe.head <$> R.unions [_eSelection]
 
-  _content <- UI.div UI.#. "navbar-start"
+  let buttons =
+        ( \xs y ->
+            imap
+              ( \index x -> do
+                  case y of
+                    Nothing -> x
+                    Just y' ->
+                      if (y' == index)
+                        then x UI.#. "navbar-item is-active"
+                        else x
+              )
+              xs
+        )
+          <$> _bButtons
+          <*> _bSelection
+
+  _content <- UI.div UI.#. "navbar-start" UI.# UI.sink items' buttons
+
   _nav <-
     UI.mkElement "nav"
       UI.#. "navbar is-dark"
@@ -114,19 +133,23 @@ viewBox = mdo
 
 items :: UI.WriteAttr ViewBox [UI.UI UI.Element]
 items = UI.mkWriteAttr $ \i x -> void $ do
-  liftIO $ atomically $ writeTVar (_buttons x) $ do
-    imap
-      ( \index btn -> do
-          btn' <- btn
-          UI.on UI.click btn' $ \_ -> void $ liftIO $ do
-            _hClick x (Just index)
-          return btn'
-      )
-      i
+  liftIO $
+    _hButtons x $
+      imap
+        ( \index btn -> do
+            btn' <- btn
+            UI.on UI.click btn' $ \_ -> void $ liftIO $ do
+              _hClick x (Just index)
+            return btn'
+        )
+        i
 
 selection :: UI.WriteAttr ViewBox (Maybe Int)
 selection = UI.mkWriteAttr $ \i x -> void $ do
-  liftIO $ atomically $ writeTVar (_selection x) i
+  liftIO $ _hSelection x i
+
+items' = UI.mkWriteAttr $ \i x -> void $ do
+  return x UI.# UI.set UI.children [] UI.#+ i
 
 -- buttons <- liftIO $ readTVarIO $ _buttons x
 -- case i of
