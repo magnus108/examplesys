@@ -2,12 +2,13 @@ module Piece.Gui.Tab.Behavior
   ( showTab,
     displayButtonTab,
     displayViewTab,
-    bZipperBox,
+    bListBox,
   )
 where
 
 import qualified Data.Map as Map
 import qualified Graphics.UI.Threepenny.Core as UI
+import qualified Graphics.UI.Threepenny.Elements as UI
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Tab as Tab
@@ -23,7 +24,7 @@ showTab = do
 displayButtonTab :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayButtonTab = do
   show <- showTab
-  return $ (UI.string .) <$> show
+  return $ (\f x -> UI.a UI.#. "navbar-item" UI.#+ [UI.string (f x)]) <$> show
 
 displayViewTab :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayViewTab = do
@@ -31,8 +32,8 @@ displayViewTab = do
   let bView = flip Map.lookup <$> Env.bViewMapTab tabEnv
   return $ (fromMaybe (UI.string "not found") .) <$> bView
 
-bZipperBox :: (Env.WithTabEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
-bZipperBox bFilterTab = do
+bListBox :: (Env.WithTabEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
+bListBox bFilterTab = do
   tabEnv <- Has.grab @Env.TabEnv
   let bDatabaseTab = Env.bDatabaseTab tabEnv
   bShowTab <- showTab
