@@ -45,6 +45,8 @@ common common-all
         Piece.Core.Item
         Piece.Core.Loan
         Piece.Core.User
+        Piece.Core.Token
+        Piece.Core.Privilege
         Piece.Db.Db
         Piece.Db.ListZipper
         Piece.Db.Loan

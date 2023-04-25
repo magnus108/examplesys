@@ -21,7 +21,7 @@ instance FromJSON a => MonadRead Monad.App a where
 
 readImpl :: (FromJSON a, UnliftIO.MonadUnliftIO m, E.As err E.UserError, E.WithError err m) => FilePath -> m a
 readImpl datastore = do
-  read' <- UnliftIO.tryAny $ liftIO $ Unsafe.fromJust . decode . fromStrict <$> BS.readFile datastore
+  read' <- UnliftIO.tryAny $ liftIO $ decode . fromStrict <$> BS.readFile datastore
   case read' of
-    Left _ -> Error.throwError (E.as E.NotFound)
-    Right x -> return x
+    Right (Just x) -> return x
+    _ -> Error.throwError (E.as E.NotFound)

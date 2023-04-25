@@ -45,6 +45,8 @@ main port = do
       databaseTab <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreTab config)
       databaseRole <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreRole config)
       databaseUser <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreUser config)
+      databasePrivilege <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastorePrivilege config)
+      databaseToken <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreToken config)
 
       -- TIMER
       time <- liftIO $ Monad.runApp env $ Error.tryError Time.time
@@ -97,6 +99,8 @@ main port = do
 
       bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
       bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions []
+      bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
+      bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
 
       -- ENV
       let env =
@@ -119,7 +123,9 @@ main port = do
                       bModalState = bModalState
                     },
                 roleEnv = Env.RoleEnv {bDatabaseRole = bDatabaseRole},
-                userEnv = Env.UserEnv {bDatabaseUser = bDatabaseUser}
+                userEnv = Env.UserEnv {bDatabaseUser = bDatabaseUser},
+                privilegeEnv = Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege},
+                tokenEnv = Env.TokenEnv {bDatabaseToken = bDatabaseToken}
               }
 
       -- RETURN
