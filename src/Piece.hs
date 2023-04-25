@@ -19,9 +19,9 @@ import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
 import qualified Piece.Db.Db as Db
-import qualified Piece.Effects.Change as Change
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
+import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
 import qualified Piece.Time.Time as Time
@@ -60,8 +60,8 @@ main port = do
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx]
 
       -- LISTEN
-      _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Change.listen (Config.datastoreLoan config) s
-      _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Change.listen (Config.datastoreTab config) s
+      _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
+      _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
 
       -- BEHAVIOR
       let eCreate = LoanCreate.eCreate loanCreate

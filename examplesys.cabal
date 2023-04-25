@@ -25,7 +25,6 @@ common common-all
         , retry
         , comonad
     other-modules:
-        Piece.Db.Json
         Piece.Gui.Tab.Behavior
         Piece.Db.Tab
         Piece
@@ -40,7 +39,7 @@ common common-all
         Piece.CakeSlayer.Has
         Piece.CakeSlayer.Monad
         Piece.Config
-        Piece.Effects.Change
+        Piece.Effects.Write
         Piece.Effects.Time
         Piece.Effects.Read
         Piece.Core.Item
@@ -104,7 +103,7 @@ test-suite examplesys-test
         Piece.Core.Item.Tests
         Piece.Db.Loan.Tests
         Piece.Db.Db.Tests
-        Piece.Effects.Change.Tests
+        Piece.Effects.Write.Tests
         Piece.Effects.Read.Tests
         Piece.Gui.Loan.Behavior.Tests
         TestSuite.Util

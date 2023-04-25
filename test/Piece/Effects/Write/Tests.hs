@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 
-module Piece.Effects.Change.Tests
+module Piece.Effects.Write.Tests
   ( tests,
   )
 where
@@ -10,7 +10,7 @@ import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer as CakeSlayer
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Db.Db as Db
-import qualified Piece.Effects.Change as Change
+import qualified Piece.Effects.Write as Write
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 import Test.Tasty
@@ -51,8 +51,8 @@ mkMockEnv = do
 
 type MockApp = CakeSlayer.App Void (MockEnv IO)
 
-instance Change.MonadChanges MockApp (Db.Database Loan.Loan) where
-  listen x s = do
+instance Write.MonadWrite MockApp (Db.Database Loan.Loan) where
+  write x s = do
     ioRef <- CakeSlayer.grab @(IORef (Db.Database Loan.Loan))
     writeIORef ioRef s
 
@@ -61,10 +61,10 @@ runMockApp = CakeSlayer.runApp
 
 tests :: TestTree
 tests =
-  testGroup "Piece.Effect.Change.Tests" $
+  testGroup "Piece.Effect.Write.Tests" $
     concat
       [ fromAssertions
-          "listen"
+          "write"
           [ test
           ]
       ]
@@ -76,7 +76,7 @@ tests =
         ioRef <- CakeSlayer.grab @(IORef (Db.Database Loan.Loan))
         loanEnv <- CakeSlayer.grab @Env.LoanEnv
         let bDatabaseLoan = Env.bDatabaseLoan loanEnv
-        liftIO $ R.onChange bDatabaseLoan $ \s -> runMockApp mockEnv $ Change.listen "" s
+        liftIO $ R.onChange bDatabaseLoan $ \s -> runMockApp mockEnv $ Write.write "" s
         liftIO $ h $ Db.create (Loan.loan "1")
         liftIO $ h $ Db.create (Loan.loan "2")
         liftIO $ h $ Db.create (Loan.loan "3")

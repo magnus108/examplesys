@@ -4,11 +4,13 @@ module Piece.Effects.Read
   )
 where
 
-import Data.Aeson (FromJSON)
+import Data.Aeson (FromJSON, decode)
+import qualified Data.ByteString as BS
 import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
-import qualified Piece.Db.Json as Json
+import qualified Relude.Unsafe as Unsafe
+import qualified UnliftIO
 
 class (FromJSON a, Monad m) => MonadRead m a where
   read :: FilePath -> m a
@@ -17,9 +19,9 @@ instance FromJSON a => MonadRead Monad.App a where
   read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (FromJSON a, E.As err E.UserError, E.WithError err m, Json.MonadReadJson m) => FilePath -> m a
+readImpl :: (FromJSON a, UnliftIO.MonadUnliftIO m, E.As err E.UserError, E.WithError err m) => FilePath -> m a
 readImpl datastore = do
-  datastore' <- Json.readJson datastore
-  case datastore' of
+  read' <- UnliftIO.tryAny $ liftIO $ Unsafe.fromJust . decode . fromStrict <$> BS.readFile datastore
+  case read' of
     Left _ -> Error.throwError (E.as E.NotFound)
     Right x -> return x
