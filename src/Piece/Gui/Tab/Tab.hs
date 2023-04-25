@@ -61,7 +61,7 @@ tabBox ::
 tabBox bitems bsel bdisplay = mdo
   view <- viewBox
 
-  _ <- return view UI.# UI.sink items (fmap <$> bdisplay <*> bitems)
+  _ <- return view UI.# UI.sink items'' (fmap <$> bdisplay <*> bitems)
 
   let bindices :: UI.Behavior (Map.Map a Int)
       bindices = (Map.fromList . flip zip [0 ..]) <$> bitems
@@ -70,7 +70,7 @@ tabBox bitems bsel bdisplay = mdo
       lookupIndex indices Nothing = Nothing
       lookupIndex indices (Just sel) = Map.lookup sel indices
 
-  _ <- return view UI.# UI.sink selection bindex
+  _ <- return view UI.# UI.sink selection'' bindex
 
   let bindices2 :: UI.Behavior (Map.Map Int a)
       bindices2 = Map.fromList . zip [0 ..] <$> bitems
@@ -85,8 +85,7 @@ tabBox bitems bsel bdisplay = mdo
 data ViewBox = ViewBox
   { _content :: UI.Element,
     _nav :: UI.Element,
-    _hButtons :: UI.Handler [UI.UI UI.Element],
-    _hSelection :: UI.Handler (Maybe Int),
+    _buttons2 :: TVar [UI.UI UI.Element],
     _eClick :: R.Event (Maybe Int),
     _hClick :: R.Handler (Maybe Int)
   }
@@ -96,30 +95,11 @@ instance UI.Widget ViewBox where
 
 viewBox :: UI.UI ViewBox
 viewBox = mdo
+  _buttons2 <- liftIO $ newTVarIO []
+
   (_eClick, _hClick) <- liftIO R.newEvent
-  (_eSelection, _hSelection) <- liftIO R.newEvent
-  (_eButtons, _hButtons) <- liftIO R.newEvent
 
-  _bButtons <- UI.stepper [] $ Unsafe.head <$> R.unions [_eButtons]
-  _bSelection <- UI.stepper Nothing $ Unsafe.head <$> R.unions [_eSelection]
-
-  let buttons =
-        ( \xs y ->
-            imap
-              ( \index x -> do
-                  case y of
-                    Nothing -> x
-                    Just y' ->
-                      if (y' == index)
-                        then x UI.#. "navbar-item is-active"
-                        else x
-              )
-              xs
-        )
-          <$> _bButtons
-          <*> _bSelection
-
-  _content <- UI.div UI.#. "navbar-start" UI.# UI.sink items' buttons
+  _content <- UI.div UI.#. "navbar-start"
 
   _nav <-
     UI.mkElement "nav"
@@ -131,26 +111,6 @@ viewBox = mdo
 
   return ViewBox {..}
 
-items :: UI.WriteAttr ViewBox [UI.UI UI.Element]
-items = UI.mkWriteAttr $ \i x -> void $ do
-  liftIO $
-    _hButtons x $
-      imap
-        ( \index btn -> do
-            btn' <- btn
-            UI.on UI.click btn' $ \_ -> void $ liftIO $ do
-              _hClick x (Just index)
-            return btn'
-        )
-        i
-
-selection :: UI.WriteAttr ViewBox (Maybe Int)
-selection = UI.mkWriteAttr $ \i x -> void $ do
-  liftIO $ _hSelection x i
-
-items' = UI.mkWriteAttr $ \i x -> void $ do
-  return x UI.# UI.set UI.children [] UI.#+ i
-
 -- buttons <- liftIO $ readTVarIO $ _buttons x
 -- case i of
 -- Nothing -> return ()
@@ -161,3 +121,35 @@ items' = UI.mkWriteAttr $ \i x -> void $ do
 -- items'' :: UI.WriteAttr ViewBox [UI.UI UI.Element]
 -- items'' = UI.mkWriteAttr $ \i x -> void $ do
 -- return (_content x) UI.# UI.set UI.children [] UI.#+ i
+--
+selection'' :: UI.WriteAttr ViewBox (Maybe Int)
+selection'' = UI.mkWriteAttr $ \i x -> void $ do
+  xs <- UI.get children' x
+  case i of
+    Nothing -> return ()
+    Just index -> void $ do
+      let ys = fmap (\z -> z UI.#. "navbar-item") xs
+      new <- Unsafe.at index ys UI.#. "navbar-item is-active"
+      UI.set items'' (take index ys ++ [return new] ++ drop (index + 1) ys) (return x)
+
+items'' :: UI.WriteAttr ViewBox [UI.UI UI.Element]
+items'' = UI.mkWriteAttr $ \i x -> void $ do
+  let ys =
+        imap
+          ( \index btn -> do
+              btn' <- btn
+              UI.on UI.click btn' $ \_ -> void $ liftIO $ do
+                _hClick x (Just index)
+              return btn'
+          )
+          i
+  UI.set children' ys (return x)
+
+children' :: UI.Attr ViewBox [UI.UI UI.Element]
+children' =
+  UI.mkReadWriteAttr
+    (\x -> atomically $ readTVar $ _buttons2 x)
+    ( \i x -> void $ do
+        atomically $ writeTVar (_buttons2 x) i
+        return (_content x) UI.# UI.set UI.children [] UI.#+ i
+    )
