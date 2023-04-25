@@ -7,14 +7,9 @@ where
 
 import qualified Data.Map as Map
 import qualified Data.Time.Format as Time
-import qualified Data.Time.LocalTime as Time
-import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
-import qualified Graphics.UI.Threepenny.Events as UI
-import qualified Graphics.UI.Threepenny.Timer as UI
 import qualified Piece.App.Env as Env
-import qualified Piece.App.Error as E
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
@@ -27,7 +22,6 @@ import qualified Piece.Gui.Tab.Tab as Tab
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
-import qualified UnliftIO
 
 main :: Int -> IO ()
 main port = do
