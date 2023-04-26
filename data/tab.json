@@ -1,1 +1,1 @@
-{"db":{"0":"lol1","1":"lol2","2":"lol3"},"nextKey":3}
+{"db":{"0":{"name":"lol1","privilege":[0]},"1":{"name":"lol1","privilege":[0]},"2":{"name":"lol1","privilege":[0]},"nextKey":3}

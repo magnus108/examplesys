@@ -7,11 +7,12 @@ where
 
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype Tab = Tab
-  { name :: String
+data Tab = Tab
+  { name :: String,
+    privilege :: [Int]
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToJSON, FromJSON)
+  deriving (ToJSON, FromJSON)
 
-tab :: String -> Tab
+tab :: String -> [Int] -> Tab
 tab = Tab
