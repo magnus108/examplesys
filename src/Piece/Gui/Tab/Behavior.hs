@@ -12,7 +12,6 @@ import qualified Data.Map as Map
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
 import qualified Graphics.UI.Threepenny.Events as UI
-import Piece.App.Env (TabEnv (bSelectionTab))
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Tab as Tab
@@ -53,11 +52,11 @@ displayButtonTabHandler = do
     )
       <$> bDisplayButton
 
-displayViewTab :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
+displayViewTab :: (Env.WithTabEnv env m) => m (R.Behavior (Maybe Db.DatabaseKey -> UI.UI UI.Element))
 displayViewTab = do
   tabEnv <- Has.grab @Env.TabEnv
   let bView = flip Map.lookup <$> Env.bViewMapTab tabEnv
-  return $ (fromMaybe (UI.string "not found") .) <$> bView
+  return $ (\f x -> fromMaybe (UI.string "not found") (f =<< x)) <$> bView
 
 bListBox :: (Env.WithTabEnv env m) => m (R.Behavior [Db.DatabaseKey])
 bListBox = do

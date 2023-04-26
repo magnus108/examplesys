@@ -18,7 +18,7 @@ import qualified Reactive.Threepenny as R
 
 data Create = Create
   { view :: UI.Element,
-    eTabSelection :: R.Event (Maybe Db.DatabaseKey)
+    tTabSelection :: R.Tidings (Maybe Db.DatabaseKey)
   }
 
 instance UI.Widget Create where
@@ -26,10 +26,11 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  boxTab <- tabBox bListBoxTabs bDisplayButtonTabHandler
+  boxTab <- tabBox bListBoxTabs bDisplayButtonTabHandler (Env.bSelectionTab tabEnv) bDisplayViewTab
   view <- UI.div UI.# UI.set UI.children [UI.getElement boxTab]
 
-  let eTabSelection = userSelection boxTab
+  let tTabSelection = userSelection boxTab
+  tabEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.TabEnv
 
   bDisplayButtonTabHandler <- liftIO $ Monad.runApp env Behavior.displayButtonTabHandler
   bListBoxTabs <- liftIO $ Monad.runApp env Behavior.bListBox
@@ -40,37 +41,44 @@ setup env = mdo
 
 data TabBox a = TabBox
   { _elementTB :: UI.Element,
-    _selectionTB :: R.Event (Maybe a)
+    _selectionTB :: R.Tidings (Maybe a)
   }
 
 instance UI.Widget (TabBox a) where
   getElement = _elementTB
 
-userSelection :: TabBox a -> R.Event (Maybe a)
+userSelection :: TabBox a -> R.Tidings (Maybe a)
 userSelection = _selectionTB
 
 tabBox ::
   UI.Behavior [a] ->
   UI.Behavior ((a -> UI.UI ()) -> a -> UI.UI UI.Element) ->
+  UI.Behavior (Maybe a) ->
+  UI.Behavior (Maybe a -> UI.UI UI.Element) ->
   UI.UI (TabBox a)
-tabBox bitems bdisplay = mdo
-  content <- UI.div UI.#. "navbar-start"
+tabBox bitems bDisplayMenu bsel bDisplayContent = mdo
+  (e, h) <- liftIO UI.newEvent
+  menu <- UI.div UI.#. "navbar-start" UI.# UI.sink items ((fmap .) <$> bDisplayMenu <*> pure (liftIO . h . Just) <*> bitems)
   nav <-
     UI.mkElement "nav"
       UI.#. "navbar is-dark"
       UI.#+ [ UI.div
                 UI.#. "navbar-menu"
-                UI.#+ [UI.element content]
+                UI.#+ [UI.element menu]
             ]
 
-  (e, h) <- liftIO UI.newEvent
-  _ <- return content UI.# UI.sink items ((fmap .) <$> bdisplay <*> pure (liftIO . h . Just) <*> bitems)
+  content <- UI.div UI.# UI.sink item (bDisplayContent <*> bsel)
+  page <- UI.div UI.#+ [UI.element nav, UI.element content]
 
-  let _selectionTB = e
-      _elementTB = nav
+  let _selectionTB = R.tidings bsel e
+      _elementTB = page
 
   return TabBox {..}
 
 items :: UI.WriteAttr UI.Element [UI.UI UI.Element]
 items = UI.mkWriteAttr $ \i x -> void $ do
   return x UI.# UI.set UI.children [] UI.#+ i
+
+item :: UI.WriteAttr UI.Element (UI.UI UI.Element)
+item = UI.mkWriteAttr $ \i x -> void $ do
+  return x UI.# UI.set UI.children [] UI.#+ [i]

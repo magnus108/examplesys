@@ -53,14 +53,15 @@ main port = do
 
       -- TODO fixthislist
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element loanCreate]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx]
 
       -- LISTEN
       _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
       _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
 
       -- BEHAVIOR
-      let eSelectionTab = Tab.eTabSelection tabs
+      let tSelectionTab = Tab.tTabSelection tabs
+          eSelectionTab = UI.rumors tSelectionTab
 
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
@@ -68,14 +69,12 @@ main port = do
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimer]
 
       bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
-      bSelectionTab <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectionTab]
+      bSelectionTab <- R.stepper (Just 0) $ Unsafe.head <$> R.unions [eSelectionTab]
       bViewMapTab <-
         R.stepper
           ( Map.fromList
               [ (0, UI.element loanCreate),
-                (1, UI.element content),
-                (2, UI.element content),
-                (3, UI.element content)
+                (1, UI.element content)
               ]
           )
           $ Unsafe.head <$> R.unions []
