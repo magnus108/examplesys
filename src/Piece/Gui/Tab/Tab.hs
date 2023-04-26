@@ -18,7 +18,7 @@ import qualified Reactive.Threepenny as R
 
 data Create = Create
   { view :: UI.Element,
-    tTabSelection :: R.Tidings (Maybe Db.DatabaseKey)
+    eTabSelection :: R.Event (Maybe Db.DatabaseKey)
   }
 
 instance UI.Widget Create where
@@ -26,11 +26,10 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  boxTab <- tabBox bListBoxTabs (Env.bSelectionTab tabEnv) bDisplayButtonTabHandler
+  boxTab <- tabBox bListBoxTabs bDisplayButtonTabHandler
   view <- UI.div UI.# UI.set UI.children [UI.getElement boxTab]
 
-  let tTabSelection = userSelection boxTab
-  tabEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.TabEnv
+  let eTabSelection = userSelection boxTab
 
   bDisplayButtonTabHandler <- liftIO $ Monad.runApp env Behavior.displayButtonTabHandler
   bListBoxTabs <- liftIO $ Monad.runApp env Behavior.bListBox
@@ -41,21 +40,20 @@ setup env = mdo
 
 data TabBox a = TabBox
   { _elementTB :: UI.Element,
-    _selectionTB :: R.Tidings (Maybe a)
+    _selectionTB :: R.Event (Maybe a)
   }
 
 instance UI.Widget (TabBox a) where
   getElement = _elementTB
 
-userSelection :: TabBox a -> R.Tidings (Maybe a)
+userSelection :: TabBox a -> R.Event (Maybe a)
 userSelection = _selectionTB
 
 tabBox ::
   UI.Behavior [a] ->
-  UI.Behavior (Maybe a) ->
   UI.Behavior ((a -> UI.UI ()) -> a -> UI.UI UI.Element) ->
   UI.UI (TabBox a)
-tabBox bitems bsel bdisplay = mdo
+tabBox bitems bdisplay = mdo
   content <- UI.div UI.#. "navbar-start"
   nav <-
     UI.mkElement "nav"
@@ -68,7 +66,7 @@ tabBox bitems bsel bdisplay = mdo
   (e, h) <- liftIO UI.newEvent
   _ <- return content UI.# UI.sink items ((fmap .) <$> bdisplay <*> pure (liftIO . h . Just) <*> bitems)
 
-  let _selectionTB = R.tidings bsel e
+  let _selectionTB = e
       _elementTB = nav
 
   return TabBox {..}

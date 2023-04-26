@@ -60,8 +60,7 @@ main port = do
       _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
 
       -- BEHAVIOR
-      let tSelectionTab = Tab.tTabSelection tabs
-          eSelectionTab = UI.rumors tSelectionTab
+      let eSelectionTab = Tab.eTabSelection tabs
 
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
