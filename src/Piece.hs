@@ -49,7 +49,7 @@ main port = do
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-      xx <- UI.div UI.# UI.sink UI.text ((Time.formatTime Time.defaultTimeLocale "%F, %T") <$> bTime)
+      xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" <$> bTime)
 
       -- TODO fixthislist
       tabs <- Tab.setup env
@@ -60,12 +60,16 @@ main port = do
       _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
 
       -- BEHAVIOR
+      let tSelectionTab = Tab.tTabSelection tabs
+          eSelectionTab = UI.rumors tSelectionTab
+
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimer]
 
       bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
+      bSelectionTab <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectionTab]
       bViewMapTab <-
         R.stepper
           ( Map.fromList
@@ -97,6 +101,7 @@ main port = do
               { tabEnv =
                   Env.TabEnv
                     { bDatabaseTab = bDatabaseTab,
+                      bSelectionTab = bSelectionTab,
                       bViewMapTab = bViewMapTab
                     },
                 timeEnv = Env.TimeEnv {bTime = bTime},

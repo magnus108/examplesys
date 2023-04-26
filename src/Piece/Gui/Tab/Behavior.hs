@@ -1,6 +1,8 @@
 module Piece.Gui.Tab.Behavior
   ( showTab,
+    displayTab,
     displayButtonTab,
+    displayButtonTabHandler,
     displayViewTab,
     bListBox,
   )
@@ -9,6 +11,8 @@ where
 import qualified Data.Map as Map
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
+import qualified Graphics.UI.Threepenny.Events as UI
+import Piece.App.Env (TabEnv (bSelectionTab))
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Tab as Tab
@@ -21,10 +25,33 @@ showTab = do
   bLookup <- DbTab.lookup
   return $ (maybe "" Tab.name .) <$> bLookup
 
+displayTab :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
+displayTab = do
+  bShow <- showTab
+  return $ (UI.string .) <$> bShow
+
+class_ :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> String))
+class_ = do
+  tabEnv <- Has.grab @Env.TabEnv
+  let bSelectionTab = Env.bSelectionTab tabEnv
+  return $ (\f x -> if f == Just x then "navbar-item is-active" else "navbar-item") <$> bSelectionTab
+
 displayButtonTab :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayButtonTab = do
-  show <- showTab
-  return $ (\f x -> UI.a UI.#. "navbar-item" UI.#+ [UI.string (f x)]) <$> show
+  bDisplay <- displayTab
+  bClass <- class_
+  return $ (\f g x -> UI.a UI.#. g x UI.#+ [f x]) <$> bDisplay <*> bClass
+
+displayButtonTabHandler :: (Env.WithTabEnv env m) => m (R.Behavior ((Db.DatabaseKey -> UI.UI ()) -> Db.DatabaseKey -> UI.UI UI.Element))
+displayButtonTabHandler = do
+  bDisplayButton <- displayButtonTab
+  return $
+    ( \display y x -> do
+        btn <- display x
+        UI.on UI.click btn $ \_ -> y x
+        return btn
+    )
+      <$> bDisplayButton
 
 displayViewTab :: (Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayViewTab = do
@@ -32,10 +59,11 @@ displayViewTab = do
   let bView = flip Map.lookup <$> Env.bViewMapTab tabEnv
   return $ (fromMaybe (UI.string "not found") .) <$> bView
 
-bListBox :: (Env.WithTabEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
-bListBox bFilterTab = do
+bListBox :: (Env.WithTabEnv env m) => m (R.Behavior [Db.DatabaseKey])
+bListBox = do
   tabEnv <- Has.grab @Env.TabEnv
   let bDatabaseTab = Env.bDatabaseTab tabEnv
+  let bFilterTab = pure (const True)
   bShowTab <- showTab
   return $
     (\p display -> filter (p . display) . Db.keys)
