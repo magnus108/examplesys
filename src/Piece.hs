@@ -53,18 +53,13 @@ main port = do
 
       -- TODO fixthislist
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element loanCreate]
 
       -- LISTEN
       _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
       _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
 
       -- BEHAVIOR
-      let eCreate = LoanCreate.eCreate loanCreate
-
-      let tLoanDatabase = LoanCreate.tDatabaseLoan loanCreate
-      let eLoanDatabase = R.rumors tLoanDatabase
-
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
@@ -82,13 +77,13 @@ main port = do
           )
           $ Unsafe.head <$> R.unions []
 
-      bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions [eLoanDatabase]
+      bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions []
       bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
       bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
       bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
       bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
       bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter, "coco" <$ eCreate]
+      bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
       bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
       bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []

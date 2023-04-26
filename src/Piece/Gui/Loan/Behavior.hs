@@ -20,13 +20,14 @@ showLoan = do
 
 displayLoan :: (Env.WithLoanEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
 displayLoan = do
-  show <- showLoan
-  return $ (UI.string .) <$> show
+  bShow <- showLoan
+  return $ (UI.string .) <$> bShow
 
-bListBox :: (Env.WithLoanEnv env m) => UI.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
-bListBox bFilterLoan = do
+bListBox :: (Env.WithLoanEnv env m) => m (R.Behavior [Db.DatabaseKey])
+bListBox = do
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+  let bFilterLoan = isPrefixOf <$> Env.bFilterLoan loanEnv
   bShowLoan <- showLoan
   return $
     (\p display -> filter (p . display) . Db.keys)
