@@ -6,12 +6,14 @@ module Piece.Core.Token
 where
 
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Piece.Core.Time as Time
 
-newtype Token = Token
-  { name :: String
+data Token = Token
+  { name :: String,
+    time :: Time.Time
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToJSON, FromJSON)
+  deriving (ToJSON, FromJSON)
 
-token :: String -> Token
+token :: String -> Time.Time -> Token
 token = Token

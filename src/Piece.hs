@@ -13,6 +13,7 @@ import qualified Piece.App.Env as Env
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
+import qualified Piece.Core.Time as Time (unTime)
 import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
@@ -49,7 +50,7 @@ main port = do
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-      xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" <$> bTime)
+      xx <- UI.div UI.# UI.sink UI.text (Time.unTime <$> bTime)
 
       -- TODO fixthislist
       tabs <- Tab.setup env
@@ -102,7 +103,7 @@ main port = do
                       bSelectionTab = bSelectionTab,
                       bViewMapTab = bViewMapTab
                     },
-                timeEnv = Env.TimeEnv {bTime = bTime},
+                timeEnv = Env.TimeEnv {bTime = bTime, timeFormat = "%F, %T"},
                 loanEnv =
                   Env.LoanEnv
                     { bDatabaseLoan = bDatabaseLoan,

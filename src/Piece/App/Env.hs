@@ -27,6 +27,7 @@ import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
+import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import Piece.Db.Db (Database, DatabaseKey)
@@ -70,7 +71,8 @@ data TabEnv = TabEnv
   }
 
 data TimeEnv = TimeEnv
-  { bTime :: R.Behavior Time.ZonedTime
+  { bTime :: R.Behavior Time.Time,
+    timeFormat :: String
   }
 
 data UserEnv = UserEnv

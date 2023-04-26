@@ -25,6 +25,7 @@ newtype App a = App
       Applicative,
       Monad,
       MonadIO,
+      MonadFail,
       MonadUnliftIO,
       MonadReader AppEnv,
       MonadError (ErrorWithSource AppError),

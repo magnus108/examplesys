@@ -7,10 +7,11 @@ import qualified Data.Time.LocalTime as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Timer as UI
 import qualified Piece.App.Monad as Monad
+import qualified Piece.Core.Time as Time (Time)
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 
-timer :: Monad.AppEnv -> UI.UI (R.Event Time.ZonedTime)
+timer :: Monad.AppEnv -> UI.UI (R.Event Time.Time)
 timer env = do
   t <- UI.timer
   (tE, tH) <- liftIO UI.newEvent
