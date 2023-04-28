@@ -5,11 +5,13 @@ module Piece
   )
 where
 
+import Control.Exception (try)
 import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
 import qualified Data.Time.Format as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
+import qualified Graphics.UI.Threepenny.Widgets as UI
 import qualified Piece.App.Env as Env
 import Piece.App.Monad (runApp)
 import qualified Piece.App.Monad as Monad
@@ -56,9 +58,18 @@ main port = do
       loanCreate <- LoanCreate.setup env
       xx <- UI.div UI.# UI.sink UI.text (Time.unTime <$> bTime)
 
+      --------------------------
+      mtime <- liftIO Time.getCurrentTime
+      dd <- UI.entry (Time.formatTime Time.defaultTimeLocale "%F, %T" <$> bs)
+      let tDd = UI.userText dd
+      let ee = R.unsafeMapIO (try . Time.parseTimeM True Time.defaultTimeLocale "%F, %T") (UI.rumors tDd) :: UI.Event (Either SomeException Time.UTCTime)
+      bs <- UI.stepper mtime $ Unsafe.head <$> R.unions [R.unsafeMapIO (\x -> return $ traceShow "gg" x) $ snd $ R.split ee]
+
+      --------------------------
+
       -- TODO fixthislist
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element dd]
 
       -- LISTEN
       _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
@@ -100,11 +111,11 @@ main port = do
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
 
       ----------------
-      let ep = (,) <$> bSelectionToken UI.<@> eTime
-      validate2 <- liftIO $ runApp env $ Token.validate2
-      validate <- Token.validate env
-      let validation = validate UI.<@> eTime
-      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [fmap Token.toID validation]
+      -- let ep = (,) <$> bSelectionToken UI.<@> eTime
+      -- validate2 <- liftIO $ runApp env $ Token.validate2
+      -- validate <- Token.validate env
+      -- let validation = validate UI.<@> eTime
+      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [] -- [fmap Token.toID validation]
       bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
       ----------------
 
