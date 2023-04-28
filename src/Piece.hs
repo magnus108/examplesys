@@ -10,13 +10,16 @@ import qualified Data.Time.Format as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
 import qualified Piece.App.Env as Env
+import Piece.App.Monad (runApp)
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
 import qualified Piece.Core.Time as Time (unTime)
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Token as Token
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
+import qualified Piece.Effects.Token as Token
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
@@ -45,7 +48,7 @@ main port = do
 
       -- TIMER
       time <- liftIO $ Monad.runApp env $ Error.tryError Time.time
-      eTimer <- Time.timer env
+      eTime <- Time.timer env
 
       -- GUI
       content <- UI.string "bob"
@@ -67,7 +70,7 @@ main port = do
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
-      bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimer]
+      bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
 
       bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
       bSelectionTab <- R.stepper (Just 0) $ Unsafe.head <$> R.unions [eSelectionTab]
@@ -92,7 +95,16 @@ main port = do
       bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
       bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions []
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
+
+      ----------------
+      let ep = (,) <$> bSelectionToken UI.<@> eTime
+      validate2 <- liftIO $ runApp env $ Token.validate2
+      _
+      validate <- Token.validate env
+      let validation = validate UI.<@> eTime
+      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [fmap Token.toID validation]
       bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
+      ----------------
 
       -- ENV
       let env =
@@ -103,7 +115,11 @@ main port = do
                       bSelectionTab = bSelectionTab,
                       bViewMapTab = bViewMapTab
                     },
-                timeEnv = Env.TimeEnv {bTime = bTime, timeFormat = "%F, %T"},
+                timeEnv =
+                  Env.TimeEnv
+                    { bTime = bTime,
+                      timeFormat = "%F, %T"
+                    },
                 loanEnv =
                   Env.LoanEnv
                     { bDatabaseLoan = bDatabaseLoan,
@@ -118,7 +134,11 @@ main port = do
                 roleEnv = Env.RoleEnv {bDatabaseRole = bDatabaseRole},
                 userEnv = Env.UserEnv {bDatabaseUser = bDatabaseUser},
                 privilegeEnv = Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege},
-                tokenEnv = Env.TokenEnv {bDatabaseToken = bDatabaseToken}
+                tokenEnv =
+                  Env.TokenEnv
+                    { bDatabaseToken = bDatabaseToken,
+                      bSelectionToken = bSelectionToken
+                    }
               }
 
       -- RETURN

@@ -27,6 +27,7 @@ common common-all
     other-modules:
         Piece.Gui.Tab.Behavior
         Piece.Db.Tab
+        Piece.Db.Token
         Piece
         Piece.Core.Role
         Piece.Core.Time

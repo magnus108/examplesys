@@ -88,7 +88,8 @@ data PrivilegeEnv = PrivilegeEnv
   }
 
 data TokenEnv = TokenEnv
-  { bDatabaseToken :: R.Behavior (Database Token.Token)
+  { bDatabaseToken :: R.Behavior (Database Token.Token),
+    bSelectionToken :: R.Behavior (Maybe DatabaseKey)
   }
 
 data LoanEnv = LoanEnv

@@ -1,6 +1,7 @@
 module Piece.Core.Token
   ( Token,
     token,
+    time,
     name,
   )
 where
