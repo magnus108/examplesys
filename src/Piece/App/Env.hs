@@ -20,6 +20,7 @@ module Piece.App.Env
 where
 
 import qualified Data.Map as Map
+import qualified Data.Time.Clock as Time
 import qualified Data.Time.LocalTime as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import Piece.CakeSlayer.Has (Field (..), Has)
@@ -89,7 +90,8 @@ data PrivilegeEnv = PrivilegeEnv
 
 data TokenEnv = TokenEnv
   { bDatabaseToken :: R.Behavior (Database Token.Token),
-    bSelectionToken :: R.Behavior (Maybe DatabaseKey)
+    bSelectionToken :: R.Behavior (Maybe DatabaseKey),
+    bTTL :: R.Behavior Time.DiffTime
   }
 
 data LoanEnv = LoanEnv

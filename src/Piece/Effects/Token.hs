@@ -36,9 +36,9 @@ validate2 = do
 
   bParseTime <- R.stepper Nothing $ Unsafe.head <$> R.unions [e]
   let bDiffTime = liftA2 Time.diffUTCTime <$> bParseTime
-  _
 
-  let it = pure (\x y -> maybe False (100 >) $ Time.nominalDiffTimeToSeconds <$> liftA2 Time.diffUTCTime x y) :: R.Behavior (Maybe Time.UTCTime -> Maybe Time.UTCTime -> Bool)
+  let difft = Env.bTTL tokenEnv
+  let it = pure (\x y z -> maybe False (x >) (liftA2 Time.diffUTCTime y z)) :: R.Behavior (Time.NominalDiffTime -> Maybe Time.UTCTime -> Maybe Time.UTCTime -> Bool)
 
   return bParseTime
 

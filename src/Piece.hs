@@ -6,6 +6,7 @@ module Piece
 where
 
 import qualified Data.Map as Map
+import qualified Data.Time.Clock as Time
 import qualified Data.Time.Format as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
@@ -70,6 +71,8 @@ main port = do
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
+      bTTL <- R.stepper (Time.secondsToDiffTime 100) $ Unsafe.head <$> R.unions []
+
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
 
       bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
@@ -99,7 +102,6 @@ main port = do
       ----------------
       let ep = (,) <$> bSelectionToken UI.<@> eTime
       validate2 <- liftIO $ runApp env $ Token.validate2
-      _
       validate <- Token.validate env
       let validation = validate UI.<@> eTime
       bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [fmap Token.toID validation]
@@ -118,7 +120,7 @@ main port = do
                 timeEnv =
                   Env.TimeEnv
                     { bTime = bTime,
-                      timeFormat = "%F, %T"
+                      timeFormat = "%F, %T" -- TODO grim
                     },
                 loanEnv =
                   Env.LoanEnv
@@ -137,7 +139,8 @@ main port = do
                 tokenEnv =
                   Env.TokenEnv
                     { bDatabaseToken = bDatabaseToken,
-                      bSelectionToken = bSelectionToken
+                      bSelectionToken = bSelectionToken,
+                      bTTL = bTTL
                     }
               }
 
