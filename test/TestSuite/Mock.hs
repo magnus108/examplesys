@@ -2,6 +2,7 @@
 
 module TestSuite.Mock
   ( runMockApp,
+    MockEnv (..),
     mockConfig,
   )
 where
@@ -10,14 +11,18 @@ import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer as CakeSlayer
 import qualified Piece.Config as Config
 import qualified Piece.Core.Loan as Loan
+import qualified Piece.Core.Token as Token
 import qualified Piece.Db.Db as Db
 import qualified Piece.Effects.Read as Read
+import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
 
 data MockEnv = MockEnv
-  { loanEnv :: Env.LoanEnv
+  { loanEnv :: Env.LoanEnv,
+    tokenEnv :: Env.TokenEnv
   }
   deriving (CakeSlayer.Has Env.LoanEnv) via CakeSlayer.Field "loanEnv" MockEnv
+  deriving (CakeSlayer.Has Env.TokenEnv) via CakeSlayer.Field "tokenEnv" MockEnv
 
 mockEnv :: MockEnv
 mockEnv =
@@ -32,6 +37,12 @@ mockEnv =
             bFilterItem = undefined,
             bFilterLoan = pure "",
             bModalState = undefined
+          },
+      tokenEnv =
+        Env.TokenEnv
+          { bDatabaseToken = pure Db.empty,
+            bSelectionToken = pure Nothing,
+            bTTL = pure 500
           }
     }
 
@@ -42,6 +53,12 @@ instance Write.MonadWrite MockApp (Db.Database Loan.Loan) where
 
 instance Read.MonadRead MockApp (Db.Database Loan.Loan) where
   read = Read.readImpl
+
+instance Time.MonadTime MockApp where
+  currentTime = Time.currentTimeImpl
+
+instance Time.MonadParseTime MockApp where
+  parseTime = Time.parseTimeImpl
 
 runMockApp :: MockApp a -> IO a
 runMockApp = CakeSlayer.runApp mockEnv

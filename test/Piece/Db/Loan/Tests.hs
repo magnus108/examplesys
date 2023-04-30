@@ -13,33 +13,8 @@ import qualified Piece.Db.Loan as DBLoan
 import qualified Reactive.Threepenny as R
 import Test.Tasty
 import Test.Tasty.HUnit
+import TestSuite.Mock
 import TestSuite.Util
-
-data MockEnv (m :: Type -> Type) = MockEnv
-  { loanEnv :: Env.LoanEnv
-  }
-  deriving (CakeSlayer.Has Env.LoanEnv) via CakeSlayer.Field "loanEnv" (MockEnv m)
-
-mockEnv :: MockEnv IO
-mockEnv =
-  MockEnv
-    { loanEnv =
-        Env.LoanEnv
-          { bDatabaseLoan = pure (DB.create (Loan.loan "test") DB.empty),
-            bSelectionUser = undefined,
-            bSelectionItem = undefined,
-            bSelectionLoan = undefined,
-            bFilterUser = undefined,
-            bFilterItem = undefined,
-            bFilterLoan = undefined,
-            bModalState = undefined
-          }
-    }
-
-runMockApp :: IO (Maybe Loan.Loan)
-runMockApp = CakeSlayer.runApp mockEnv $ do
-  x <- DBLoan.lookup
-  R.currentValue (x ?? 0)
 
 tests :: TestTree
 tests =
@@ -52,6 +27,8 @@ tests =
       ]
   where
     lookupLoan = do
-      lookup <- runMockApp
-      let value = Just (Loan.loan "test")
+      lookup <- runMockApp $ do
+        x <- DBLoan.lookup
+        R.currentValue (x ?? 0)
+      let value = Just (Loan.loan "1")
       value @=? lookup

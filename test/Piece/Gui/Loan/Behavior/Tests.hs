@@ -22,7 +22,7 @@ tests =
             test2
           ],
         fromAssertions
-          "displayLoan" -- Foreign.JavaScript ?
+          "displayLoan"
           [],
         fromAssertions
           "bListBox"

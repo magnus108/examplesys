@@ -40,7 +40,7 @@ validate = do
            in case tokenTime of
                 Nothing -> Left ()
                 Just t ->
-                  let diffTime = Time.diffUTCTime (Time.unTime t) (Time.unTime now)
+                  let diffTime = Time.diffUTCTime (Time.unTime now) (Time.unTime t)
                    in if ttl < diffTime then Left () else Right k
     )
       <$> bGetTime

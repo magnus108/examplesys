@@ -1,8 +1,10 @@
 module Piece.Effects.Time
   ( MonadTime,
     currentTime,
+    currentTimeImpl,
     MonadParseTime,
     parseTime,
+    parseTimeImpl,
   )
 where
 
@@ -21,26 +23,32 @@ class Monad m => MonadTime m where
   currentTime :: m Time.Time
 
 instance MonadTime Monad.App where
-  currentTime = currentTimeImpl
+  currentTime = currentTimeImplSafe
   {-# INLINE currentTime #-}
 
-currentTimeImpl :: (UnliftIO.MonadUnliftIO m, E.As err E.UserError, E.WithError err m) => m Time.Time
-currentTimeImpl = do
-  time <- UnliftIO.tryAny (liftIO Time.getCurrentTime)
+currentTimeImpl :: (MonadIO m) => m Time.Time
+currentTimeImpl = Time.time <$> liftIO Time.getCurrentTime
+
+currentTimeImplSafe :: (UnliftIO.MonadUnliftIO m, E.As err E.UserError, E.WithError err m) => m Time.Time
+currentTimeImplSafe = do
+  time <- UnliftIO.tryAny currentTimeImpl
   case time of
     Left _ -> Error.throwError (E.as E.NotFound)
-    Right y -> return (Time.time y)
+    Right y -> return y
 
 class Monad m => MonadParseTime m where
   parseTime :: String -> String -> m Time.Time
 
 instance MonadParseTime Monad.App where
-  parseTime = parseTimeImpl
+  parseTime = parseTimeImplSafe
   {-# INLINE parseTime #-}
 
-parseTimeImpl :: (Env.WithTimeEnv env m, UnliftIO.MonadUnliftIO m, MonadFail m, E.As err E.UserError, E.WithError err m) => String -> String -> m Time.Time
-parseTimeImpl format x = do
-  parse <- UnliftIO.tryAny $ Time.parseTimeM True Time.defaultTimeLocale format x
+parseTimeImpl :: (MonadFail m) => String -> String -> m Time.Time
+parseTimeImpl x y = Time.time <$> Time.parseTimeM True Time.defaultTimeLocale x y
+
+parseTimeImplSafe :: (Env.WithTimeEnv env m, UnliftIO.MonadUnliftIO m, MonadFail m, E.As err E.UserError, E.WithError err m) => String -> String -> m Time.Time
+parseTimeImplSafe format x = do
+  parse <- UnliftIO.tryAny $ parseTimeImpl format x
   case parse of
     Left _ -> Error.throwError (E.as E.NotFound)
-    Right y -> return (Time.time y)
+    Right y -> return y

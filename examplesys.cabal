@@ -107,6 +107,7 @@ test-suite examplesys-test
     other-modules:
         Piece.Core.Item.Tests
         Piece.Db.Loan.Tests
+        Piece.Db.Token.Tests
         Piece.Db.Db.Tests
         Piece.Effects.Write.Tests
         Piece.Effects.Read.Tests
