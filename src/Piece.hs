@@ -5,7 +5,6 @@ module Piece
   )
 where
 
-import Control.Exception (try)
 import qualified Control.Monad.IO.Unlift as UnliftIO
 import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
@@ -18,7 +17,7 @@ import Piece.App.Monad (runApp)
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
-import qualified Piece.Core.Time as Time (unTime)
+import qualified Piece.Core.Time as Time (time, unTime)
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Effects.Read as Read
@@ -52,16 +51,14 @@ main port = do
       databaseToken <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreToken config)
 
       -- TIMER
-      time <- liftIO $ Monad.runApp env $ Error.tryError Time.time
+      time <- liftIO $ Monad.runApp env $ Error.tryError Time.currentTime
       eTime <- Time.timer env
 
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
-      xx <- UI.div UI.# UI.sink UI.text (Time.unTime <$> bTime)
+      xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" . Time.unTime <$> bTime)
 
-      --------------------------
-      mtime <- liftIO Time.getCurrentTime
       timeGui <- GuiTime.setup env bErr bSucc
       let tTimeGuiSucc = GuiTime.userText timeGui
           eTimeGuiSucc = UI.rumors tTimeGuiSucc
@@ -69,11 +66,8 @@ main port = do
           eTimeGuiErr = UI.rumors tTimeGuiErr
 
       bErr <- UI.stepper Nothing $ Unsafe.head <$> R.unions [Nothing <$ eTimeGuiSucc, eTimeGuiErr]
-      bSucc <- UI.stepper mtime $ Unsafe.head <$> R.unions [eTimeGuiSucc]
+      bSucc <- UI.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimeGuiSucc]
 
-      --------------------------
-
-      -- TODO fixthislist
       tabs <- Tab.setup env
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui]
 
@@ -116,14 +110,8 @@ main port = do
       bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions []
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
 
-      ----------------
-      -- let ep = (,) <$> bSelectionToken UI.<@> eTime
-      -- validate2 <- liftIO $ runApp env $ Token.validate2
-      -- validate <- Token.validate env
-      -- let validation = validate UI.<@> eTime
-      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [] -- [fmap Token.toID validation]
+      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions []
       bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
-      ----------------
 
       -- ENV
       let env =
@@ -136,8 +124,7 @@ main port = do
                     },
                 timeEnv =
                   Env.TimeEnv
-                    { bTime = bTime,
-                      timeFormat = "%F, %T" -- TODO grim
+                    { bTime = bTime
                     },
                 loanEnv =
                   Env.LoanEnv

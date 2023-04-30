@@ -72,8 +72,7 @@ data TabEnv = TabEnv
   }
 
 data TimeEnv = TimeEnv
-  { bTime :: R.Behavior Time.Time,
-    timeFormat :: String
+  { bTime :: R.Behavior Time.Time
   }
 
 data UserEnv = UserEnv

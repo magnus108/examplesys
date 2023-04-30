@@ -16,7 +16,7 @@ timer env = do
   t <- UI.timer
   (tE, tH) <- liftIO UI.newEvent
   _ <- liftIO $ R.register (UI.tick t) $ \_ -> do
-    time <- liftIO $ Monad.runApp env Time.time
+    time <- liftIO $ Monad.runApp env Time.currentTime
     tH time
   _ <- return t UI.# UI.set UI.interval 1000 UI.# UI.set UI.running True
   return tE
