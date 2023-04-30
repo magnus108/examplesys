@@ -22,7 +22,6 @@ import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
-import qualified Piece.Effects.Token as Token
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
@@ -82,7 +81,7 @@ main port = do
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
-      bTTL <- R.stepper (Time.secondsToDiffTime 100) $ Unsafe.head <$> R.unions []
+      bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
 
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
 
@@ -110,7 +109,10 @@ main port = do
       bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions []
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
 
-      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+      validate <- liftIO $ Monad.runApp env $ Token.validate
+      let eToken = validate UI.<@> eTime
+          (eInvalidToken, eValidToken) = UI.split eToken
+      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [fmap Just eValidToken, Nothing <$ eInvalidToken]
       bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
 
       -- ENV

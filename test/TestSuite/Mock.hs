@@ -24,13 +24,13 @@ mockEnv =
   MockEnv
     { loanEnv =
         Env.LoanEnv
-          { bDatabaseLoan = undefined,
-            bSelectionUser = undefined,
+          { bSelectionUser = undefined,
             bSelectionItem = undefined,
             bSelectionLoan = undefined,
+            bDatabaseLoan = pure (Db.create (Loan.loan "1") Db.empty),
             bFilterUser = undefined,
             bFilterItem = undefined,
-            bFilterLoan = undefined,
+            bFilterLoan = pure "",
             bModalState = undefined
           }
     }

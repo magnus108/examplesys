@@ -45,7 +45,6 @@ common common-all
         Piece.Effects.Write
         Piece.Effects.Time
         Piece.Effects.Read
-        Piece.Effects.Token
         Piece.Core.Item
         Piece.Core.Loan
         Piece.Core.User

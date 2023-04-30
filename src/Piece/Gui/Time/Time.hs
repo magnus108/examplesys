@@ -28,7 +28,6 @@ import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
-import qualified Piece.Effects.Token as Token
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Behavior as Behavior
 import qualified Piece.Gui.Loan.Create as LoanCreate
