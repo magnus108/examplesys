@@ -26,6 +26,7 @@ common common-all
         , comonad
     other-modules:
         Piece.Gui.Tab.Behavior
+        Piece.Gui.Time.Time
         Piece.Db.Tab
         Piece.Db.Token
         Piece

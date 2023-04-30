@@ -6,6 +6,7 @@ module Piece
 where
 
 import Control.Exception (try)
+import qualified Control.Monad.IO.Unlift as UnliftIO
 import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
 import qualified Data.Time.Format as Time
@@ -26,6 +27,7 @@ import qualified Piece.Effects.Token as Token
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
+import qualified Piece.Gui.Time.Time as GuiTime
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -60,16 +62,20 @@ main port = do
 
       --------------------------
       mtime <- liftIO Time.getCurrentTime
-      dd <- UI.entry (Time.formatTime Time.defaultTimeLocale "%F, %T" <$> bs)
-      let tDd = UI.userText dd
-      let ee = R.unsafeMapIO (try . Time.parseTimeM True Time.defaultTimeLocale "%F, %T") (UI.rumors tDd) :: UI.Event (Either SomeException Time.UTCTime)
-      bs <- UI.stepper mtime $ Unsafe.head <$> R.unions [R.unsafeMapIO (\x -> return $ traceShow "gg" x) $ snd $ R.split ee]
+      timeGui <- GuiTime.setup env bErr bSucc
+      let tTimeGuiSucc = GuiTime.userText timeGui
+          eTimeGuiSucc = UI.rumors tTimeGuiSucc
+      let tTimeGuiErr = GuiTime.errText timeGui
+          eTimeGuiErr = UI.rumors tTimeGuiErr
+
+      bErr <- UI.stepper Nothing $ Unsafe.head <$> R.unions [Nothing <$ eTimeGuiSucc, eTimeGuiErr]
+      bSucc <- UI.stepper mtime $ Unsafe.head <$> R.unions [eTimeGuiSucc]
 
       --------------------------
 
       -- TODO fixthislist
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element dd]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui]
 
       -- LISTEN
       _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
