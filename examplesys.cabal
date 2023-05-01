@@ -52,7 +52,9 @@ common common-all
         Piece.Core.Item
         Piece.Core.Loan
         Piece.Core.User
-        Piece.Core.UserForm
+        Piece.Gui.User.Login
+        Piece.Core.UserCreateForm
+        Piece.Core.UserLoginForm
         Piece.Core.Token
         Piece.Core.Privilege
         Piece.Db.Db

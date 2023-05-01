@@ -28,6 +28,7 @@ import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
 import qualified Piece.Gui.Time.Time as GuiTime
 import qualified Piece.Gui.User.Create as UserCreate
+import qualified Piece.Gui.User.Login as UserLogin
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -59,6 +60,7 @@ main port = do
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
       userCreate <- UserCreate.setup env
+      userLogin <- UserLogin.setup env
       xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" . Time.unTime <$> bTime)
 
       timeGui <- GuiTime.setup env bErr bSucc
@@ -71,7 +73,7 @@ main port = do
       bSucc <- UI.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimeGuiSucc]
 
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userCreate]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userCreate, UI.element userLogin]
 
       -- LISTEN
       _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
@@ -85,13 +87,24 @@ main port = do
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
-      let tUserFormCreate = UserCreate.tUserFormCreate userCreate
-          eUserFormCreate = UI.rumors tUserFormCreate
+      let tUserCreateForm = UserCreate.tUserCreateForm userCreate
+          eUserCreateForm = UI.rumors tUserCreateForm
+
       let tUserCreate = UserCreate.tUserCreate userCreate
           eUserCreate = UI.rumors tUserCreate
 
-      bUserFormCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserFormCreate, Nothing <$ eUserCreate]
+      bUserCreateForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserCreateForm, Nothing <$ eUserCreate]
       bUserCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
+
+      let tUserLoginForm = UserLogin.tUserLoginForm userLogin
+          eUserLoginForm = UI.rumors tUserLoginForm
+
+      let tUserLogin = UserLogin.tUserLogin userLogin
+          eUserLogin = UI.rumors tUserLogin
+
+      bUserLoginForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
+      bUserLogin <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserLogin]
+      UI.onChanges bUserLogin $ traceShowM
 
       bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
 
@@ -156,7 +169,9 @@ main port = do
                   UserEnv.UserEnv
                     { bDatabaseUser = bDatabaseUser,
                       bUserCreate = bUserCreate,
-                      bUserFormCreate = bUserFormCreate
+                      bUserCreateForm = bUserCreateForm,
+                      bUserLoginForm = bUserLoginForm,
+                      bUserLogin = bUserLogin
                     },
                 privilegeEnv = Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege},
                 tokenEnv =
