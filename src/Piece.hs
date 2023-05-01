@@ -90,7 +90,7 @@ main port = do
       let tUserCreate = UserCreate.tUserCreate userCreate
           eUserCreate = UI.rumors tUserCreate
 
-      bUserFormCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserFormCreate]
+      bUserFormCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserFormCreate, Nothing <$ eUserCreate]
       bUserCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
 
       bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
@@ -118,7 +118,7 @@ main port = do
       bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
       bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
-      bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [] -- flip Db.create <$> bDatabaseUser UI.<@> eUserCreate]
+      bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
 
       validate <- liftIO $ Monad.runApp env $ Token.validate
