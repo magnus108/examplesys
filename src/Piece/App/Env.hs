@@ -6,7 +6,6 @@ module Piece.App.Env
     TabEnv (..),
     TimeEnv (..),
     RoleEnv (..),
-    UserEnv (..),
     PrivilegeEnv (..),
     TokenEnv (..),
     WithLoanEnv,
@@ -23,6 +22,7 @@ import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
 import qualified Data.Time.LocalTime as Time
 import qualified Graphics.UI.Threepenny.Core as UI
+import qualified Piece.App.UserEnv as UserEnv
 import Piece.CakeSlayer.Has (Field (..), Has)
 import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Privilege as Privilege
@@ -38,7 +38,7 @@ data Env (m :: Type -> Type) = Env
   { loanEnv :: LoanEnv,
     tabEnv :: TabEnv,
     timeEnv :: TimeEnv,
-    userEnv :: UserEnv,
+    userEnv :: UserEnv.UserEnv,
     roleEnv :: RoleEnv,
     privilegeEnv :: PrivilegeEnv,
     tokenEnv :: TokenEnv
@@ -46,7 +46,7 @@ data Env (m :: Type -> Type) = Env
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
   deriving (Has TabEnv) via Field "tabEnv" (Env m)
   deriving (Has TimeEnv) via Field "timeEnv" (Env m)
-  deriving (Has UserEnv) via Field "userEnv" (Env m)
+  deriving (Has UserEnv.UserEnv) via Field "userEnv" (Env m)
   deriving (Has RoleEnv) via Field "roleEnv" (Env m)
   deriving (Has PrivilegeEnv) via Field "privilegeEnv" (Env m)
   deriving (Has TokenEnv) via Field "tokenEnv" (Env m)
@@ -57,7 +57,7 @@ type WithTabEnv env m = (MonadReader env m, Has TabEnv env)
 
 type WithTimeEnv env m = (MonadReader env m, Has TimeEnv env)
 
-type WithUserEnv env m = (MonadReader env m, Has UserEnv env)
+type WithUserEnv env m = (MonadReader env m, Has UserEnv.UserEnv env)
 
 type WithRoleEnv env m = (MonadReader env m, Has RoleEnv env)
 
@@ -73,10 +73,6 @@ data TabEnv = TabEnv
 
 data TimeEnv = TimeEnv
   { bTime :: R.Behavior Time.Time
-  }
-
-data UserEnv = UserEnv
-  { bDatabaseUser :: R.Behavior (Database User.User)
   }
 
 data RoleEnv = RoleEnv

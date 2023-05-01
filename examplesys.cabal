@@ -7,6 +7,7 @@ common common-all
     build-depends:
         base >=4.16 && <5
         , monad-control
+        , bcrypt
         , ilist
         , time
         , transformers-base
@@ -33,6 +34,7 @@ common common-all
         Piece.Core.Role
         Piece.Core.Time
         Piece.App.Env
+        Piece.App.UserEnv
         Piece.Gui.Tab.Tab
         Piece.App.Error
         Piece.App.Monad
@@ -40,6 +42,7 @@ common common-all
         Piece.Core.Tab
         Piece.CakeSlayer.Error
         Piece.CakeSlayer.Has
+        Piece.CakeSlayer.Password
         Piece.CakeSlayer.Monad
         Piece.Config
         Piece.Effects.Write
@@ -48,14 +51,18 @@ common common-all
         Piece.Core.Item
         Piece.Core.Loan
         Piece.Core.User
+        Piece.Core.UserForm
         Piece.Core.Token
         Piece.Core.Privilege
         Piece.Db.Db
         Piece.Db.ListZipper
         Piece.Db.Loan
+        Piece.Db.User
         Piece.Time.Time
         Piece.Gui.Loan.Create
         Piece.Gui.Loan.Behavior
+        Piece.Gui.User.Create
+        Piece.Gui.User.Behavior
 
     mixins:
         base hiding (Prelude)

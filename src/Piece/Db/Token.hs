@@ -26,6 +26,7 @@ getTime = do
   bLookup <- lookup
   return $ (fmap Token.time .) <$> bLookup
 
+-- TODO this is ugly. Move to event
 validate :: (MonadUnliftIO.MonadUnliftIO m, MonadIO m, Time.MonadParseTime m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))
 validate = do
   tokenEnv <- Has.grab @Env.TokenEnv

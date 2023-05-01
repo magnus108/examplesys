@@ -15,6 +15,7 @@ import qualified Graphics.UI.Threepenny.Widgets as UI
 import qualified Piece.App.Env as Env
 import Piece.App.Monad (runApp)
 import qualified Piece.App.Monad as Monad
+import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.Config as Config
 import qualified Piece.Core.Time as Time (time, unTime)
@@ -26,6 +27,7 @@ import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
 import qualified Piece.Gui.Time.Time as GuiTime
+import qualified Piece.Gui.User.Create as UserCreate
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -56,6 +58,7 @@ main port = do
       -- GUI
       content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
+      userCreate <- UserCreate.setup env
       xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" . Time.unTime <$> bTime)
 
       timeGui <- GuiTime.setup env bErr bSucc
@@ -68,11 +71,12 @@ main port = do
       bSucc <- UI.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimeGuiSucc]
 
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userCreate]
 
       -- LISTEN
       _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
       _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
+      _ <- UI.liftIOLater $ R.onChange bDatabaseUser $ \s -> Monad.runApp env $ Write.write (Config.datastoreUser config) s
 
       -- BEHAVIOR
       let tSelectionTab = Tab.tTabSelection tabs
@@ -80,6 +84,14 @@ main port = do
 
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
+
+      let tUserFormCreate = UserCreate.tUserFormCreate userCreate
+          eUserFormCreate = UI.rumors tUserFormCreate
+      let tUserCreate = UserCreate.tUserCreate userCreate
+          eUserCreate = UI.rumors tUserCreate
+
+      bUserFormCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserFormCreate]
+      bUserCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
 
       bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
 
@@ -106,7 +118,7 @@ main port = do
       bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
       bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
-      bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions []
+      bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [] -- flip Db.create <$> bDatabaseUser UI.<@> eUserCreate]
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
 
       validate <- liftIO $ Monad.runApp env $ Token.validate
@@ -140,7 +152,12 @@ main port = do
                       bModalState = bModalState
                     },
                 roleEnv = Env.RoleEnv {bDatabaseRole = bDatabaseRole},
-                userEnv = Env.UserEnv {bDatabaseUser = bDatabaseUser},
+                userEnv =
+                  UserEnv.UserEnv
+                    { bDatabaseUser = bDatabaseUser,
+                      bUserCreate = bUserCreate,
+                      bUserFormCreate = bUserFormCreate
+                    },
                 privilegeEnv = Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege},
                 tokenEnv =
                   Env.TokenEnv

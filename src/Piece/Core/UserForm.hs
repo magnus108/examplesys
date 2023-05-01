@@ -1,4 +1,4 @@
-module Piece.Core.User
+module Piece.Core.UserForm
   ( User,
     name,
     user,
@@ -13,11 +13,11 @@ import qualified Piece.Core.Role as Role
 
 data User = User
   { name :: String,
-    password :: Password.PasswordHash,
+    password :: Password.PasswordPlainText,
     roles :: [Int]
   }
   deriving stock (Show, Eq, Generic)
   deriving (ToJSON, FromJSON)
 
-user :: String -> Password.PasswordHash -> [Int] -> User
+user :: String -> Password.PasswordPlainText -> [Int] -> User
 user = User
