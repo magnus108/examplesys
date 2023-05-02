@@ -84,9 +84,7 @@ data PrivilegeEnv = PrivilegeEnv
   }
 
 data TokenEnv = TokenEnv
-  { bDatabaseToken :: R.Behavior (Database Token.Token),
-    bSelectionToken :: R.Behavior (Maybe DatabaseKey),
-    bTTL :: R.Behavior Time.NominalDiffTime
+  { bSelectionToken :: R.Behavior (Maybe DatabaseKey)
   }
 
 data LoanEnv = LoanEnv

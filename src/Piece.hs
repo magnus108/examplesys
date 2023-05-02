@@ -25,6 +25,7 @@ import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time (time, unTime)
+import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Core.UserLoginForm as UserLoginForm
@@ -56,7 +57,6 @@ main port = do
     $ \window -> mdo
       -- READ
       databaseTab <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreTab config)
-      databaseToken <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreToken config)
       -- TIMER
       time <- liftIO $ Monad.runApp env $ Error.tryError Time.currentTime
       eTime <- Time.timer env
@@ -91,13 +91,14 @@ main port = do
           $ Unsafe.head <$> R.unions []
 
       ---------TOKEN
-      bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
+      {-
       validate <- liftIO $ Monad.runApp env $ Token.validate
       let eToken = validate UI.<@> eTime
           (eInvalidToken, eValidToken) = UI.split eToken
       bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [fmap Just eValidToken, Nothing <$ eInvalidToken]
-      bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
+      -}
+      bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [] -- [fmap Just eValidToken, Nothing <$ eInvalidToken]
 
       -- ENV hvorfor får jeg ik fejl?
       userEnv <- liftIO $ Monad.runApp env $ userEnvSetup config userCreate userLogin
@@ -123,9 +124,7 @@ main port = do
                 privilegeEnv = privilegeEnv,
                 tokenEnv =
                   Env.TokenEnv
-                    { bDatabaseToken = bDatabaseToken,
-                      bSelectionToken = bSelectionToken,
-                      bTTL = bTTL
+                    { bSelectionToken = bSelectionToken
                     }
               }
 
@@ -197,20 +196,32 @@ databaseUserSetup config userCreate = mdo
   bDatabaseUser <- R.stepper databaseUser $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
   return bDatabaseUser
 
-userEnvSetup :: (MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database User.User)) => Config.Config -> UserCreate.Create -> UserLogin.Create -> m UserEnv.UserEnv
+databaseTokenSetup :: (Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Token.Token)) => Config.Config -> m (R.Behavior (Db.Database Token.Token))
+databaseTokenSetup config = do
+  databaseToken <- Read.read (Config.datastoreToken config)
+  R.stepper databaseToken $ Unsafe.head <$> R.unions []
+
+ttlSetup :: (Fix.MonadFix m, MonadIO m) => m (R.Behavior Time.NominalDiffTime)
+ttlSetup = R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
+
+userEnvSetup :: (MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database Token.Token), Read.MonadRead m (Db.Database User.User)) => Config.Config -> UserCreate.Create -> UserLogin.Create -> m UserEnv.UserEnv
 userEnvSetup config userCreate userLogin = do
   bUserCreateForm <- userCreateFormSetup userCreate
   bUserCreate <- userCreateSetup userCreate
   bUserLoginForm <- userLoginFormSetup userLogin
   bUserLogin <- userLoginSetup userLogin
   bDatabaseUser <- databaseUserSetup config userCreate
+  bDatabaseToken <- databaseTokenSetup config
+  bTTL <- ttlSetup
   return $
     UserEnv.UserEnv
       { bDatabaseUser = bDatabaseUser,
         bUserCreate = bUserCreate,
         bUserCreateForm = bUserCreateForm,
         bUserLoginForm = bUserLoginForm,
-        bUserLogin = bUserLogin
+        bUserLogin = bUserLogin,
+        bDatabaseToken = bDatabaseToken,
+        bTTL = bTTL
       }
 
 loanEnvSetup :: (MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database Loan.Loan)) => Config.Config -> LoanCreate.Create -> m Env.LoanEnv
