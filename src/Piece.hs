@@ -21,6 +21,7 @@ import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
 import qualified Piece.Core.Loan as Loan
+import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time (time, unTime)
@@ -65,7 +66,6 @@ main port = do
       eTime <- Time.timer env
 
       -- GUI
-      content <- UI.string "bob"
       loanCreate <- LoanCreate.setup env
       userCreate <- UserCreate.setup env
       userLogin <- UserLogin.setup env
@@ -81,7 +81,7 @@ main port = do
       bSucc <- UI.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimeGuiSucc]
 
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userCreate, UI.element userLogin]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userLogin]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ listen config
@@ -100,7 +100,7 @@ main port = do
         R.stepper
           ( Map.fromList
               [ (0, UI.element loanCreate),
-                (1, UI.element content)
+                (1, UI.element userCreate)
               ]
           )
           $ Unsafe.head <$> R.unions []

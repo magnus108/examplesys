@@ -2,7 +2,7 @@ module Piece.Core.Token
   ( Token,
     token,
     time,
-    name,
+    user,
   )
 where
 
@@ -10,11 +10,11 @@ import Data.Aeson (FromJSON, ToJSON)
 import qualified Piece.Core.Time as Time
 
 data Token = Token
-  { name :: String,
+  { user :: Int,
     time :: Time.Time
   }
   deriving stock (Show, Eq, Generic)
   deriving (ToJSON, FromJSON)
 
-token :: String -> Time.Time -> Token
+token :: Int -> Time.Time -> Token
 token = Token
