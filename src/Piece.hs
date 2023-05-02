@@ -69,10 +69,9 @@ main port = do
       loanCreate <- LoanCreate.setup env
       userCreate <- UserCreate.setup env
       userLogin <- UserLogin.setup env
-      xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" . Time.unTime <$> bTime)
 
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element userLogin]
+      _ <- UI.getBody window UI.#+ [UI.element tabs]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ listen config
@@ -91,7 +90,8 @@ main port = do
         R.stepper
           ( Map.fromList
               [ (0, UI.element loanCreate),
-                (1, UI.element userCreate)
+                (1, UI.element userCreate),
+                (2, UI.element userLogin)
               ]
           )
           $ Unsafe.head <$> R.unions []
