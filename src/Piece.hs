@@ -92,12 +92,6 @@ main port = do
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
-      bUserCreateForm <- userCreateFormSetup userCreate
-      bUserCreate <- userCreateSetup userCreate
-      bUserLoginForm <- userLoginFormSetup userLogin
-      bUserLogin <- userLoginSetup userLogin
-      bDatabaseUser <- databaseUserSetup databaseUser userCreate
-
       bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
 
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
@@ -131,6 +125,8 @@ main port = do
       bSelectionToken <- R.stepper Nothing $ Unsafe.head <$> R.unions [fmap Just eValidToken, Nothing <$ eInvalidToken]
       bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
 
+      userEnv <- userEnvSetup userCreate userLogin databaseUser
+
       -- ENV
       let env =
             Env.Env
@@ -156,14 +152,7 @@ main port = do
                       bModalState = bModalState
                     },
                 roleEnv = Env.RoleEnv {bDatabaseRole = bDatabaseRole},
-                userEnv =
-                  UserEnv.UserEnv
-                    { bDatabaseUser = bDatabaseUser,
-                      bUserCreate = bUserCreate,
-                      bUserCreateForm = bUserCreateForm,
-                      bUserLoginForm = bUserLoginForm,
-                      bUserLogin = bUserLogin
-                    },
+                userEnv = userEnv,
                 privilegeEnv = Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege},
                 tokenEnv =
                   Env.TokenEnv
@@ -239,3 +228,19 @@ databaseUserSetup databaseUser userCreate = mdo
       eUserCreate = UI.rumors tUserCreate
   bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
   return bDatabaseUser
+
+userEnvSetup :: (MonadIO m, Fix.MonadFix m) => UserCreate.Create -> UserLogin.Create -> Either e (Db.Database User.User) -> m UserEnv.UserEnv
+userEnvSetup userCreate userLogin databaseUser = do
+  bUserCreateForm <- userCreateFormSetup userCreate
+  bUserCreate <- userCreateSetup userCreate
+  bUserLoginForm <- userLoginFormSetup userLogin
+  bUserLogin <- userLoginSetup userLogin
+  bDatabaseUser <- databaseUserSetup databaseUser userCreate
+  return $
+    UserEnv.UserEnv
+      { bDatabaseUser = bDatabaseUser,
+        bUserCreate = bUserCreate,
+        bUserCreateForm = bUserCreateForm,
+        bUserLoginForm = bUserLoginForm,
+        bUserLogin = bUserLogin
+      }
