@@ -5,6 +5,7 @@ module Piece
   )
 where
 
+import qualified Control.Monad.Fix as Fix
 import qualified Control.Monad.IO.Unlift as UnliftIO
 import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
@@ -17,8 +18,14 @@ import Piece.App.Monad (runApp)
 import qualified Piece.App.Monad as Monad
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Error as Error
+import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
+import qualified Piece.Core.Loan as Loan
+import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time (time, unTime)
+import qualified Piece.Core.User as User
+import qualified Piece.Core.UserCreateForm as UserCreateForm
+import qualified Piece.Core.UserLoginForm as UserLoginForm
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Effects.Read as Read
@@ -76,9 +83,7 @@ main port = do
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userCreate, UI.element userLogin]
 
       -- LISTEN
-      _ <- UI.liftIOLater $ R.onChange bDatabaseLoan $ \s -> Monad.runApp env $ Write.write (Config.datastoreLoan config) s
-      _ <- UI.liftIOLater $ R.onChange bDatabaseTab $ \s -> Monad.runApp env $ Write.write (Config.datastoreTab config) s
-      _ <- UI.liftIOLater $ R.onChange bDatabaseUser $ \s -> Monad.runApp env $ Write.write (Config.datastoreUser config) s
+      _ <- UI.liftIOLater $ Monad.runApp env $ listen config
 
       -- BEHAVIOR
       let tSelectionTab = Tab.tTabSelection tabs
@@ -87,24 +92,11 @@ main port = do
       let tLoanFilter = LoanCreate.tLoanFilter loanCreate
       let eLoanFilter = R.rumors tLoanFilter
 
-      let tUserCreateForm = UserCreate.tUserCreateForm userCreate
-          eUserCreateForm = UI.rumors tUserCreateForm
-
-      let tUserCreate = UserCreate.tUserCreate userCreate
-          eUserCreate = UI.rumors tUserCreate
-
-      bUserCreateForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserCreateForm, Nothing <$ eUserCreate]
-      bUserCreate <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
-
-      let tUserLoginForm = UserLogin.tUserLoginForm userLogin
-          eUserLoginForm = UI.rumors tUserLoginForm
-
-      let tUserLogin = UserLogin.tUserLogin userLogin
-          eUserLogin = UI.rumors tUserLogin
-
-      bUserLoginForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
-      bUserLogin <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserLogin]
-      UI.onChanges bUserLogin $ traceShowM
+      bUserCreateForm <- userCreateFormSetup userCreate
+      bUserCreate <- userCreateSetup userCreate
+      bUserLoginForm <- userLoginFormSetup userLogin
+      bUserLogin <- userLoginSetup userLogin
+      bDatabaseUser <- databaseUserSetup databaseUser userCreate
 
       bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
 
@@ -131,7 +123,6 @@ main port = do
       bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
 
       bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
-      bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
       bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
 
       validate <- liftIO $ Monad.runApp env $ Token.validate
@@ -184,3 +175,67 @@ main port = do
 
       -- RETURN
       return ()
+
+listen ::
+  ( MonadReader env m,
+    Has.Has Env.LoanEnv env,
+    Has.Has UserEnv.UserEnv env,
+    Has.Has Env.TabEnv env,
+    Write.MonadWrite m (Db.Database Tab.Tab),
+    Write.MonadWrite m (Db.Database Loan.Loan),
+    Write.MonadWrite m (Db.Database User.User),
+    UnliftIO.MonadUnliftIO m
+  ) =>
+  Config.Config ->
+  m ()
+listen config = do
+  userEnv <- Has.grab @UserEnv.UserEnv
+  let bDatabaseUser = UserEnv.bDatabaseUser userEnv
+  tabEnv <- Has.grab @Env.TabEnv
+  let bDatabaseTab = Env.bDatabaseTab tabEnv
+  loanEnv <- Has.grab @Env.LoanEnv
+  let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+  UnliftIO.withRunInIO $ \run -> do
+    _ <- UI.liftIO $ R.onChange bDatabaseLoan $ \s -> run $ Write.write (Config.datastoreLoan config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseTab $ \s -> run $ Write.write (Config.datastoreTab config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseUser $ \s -> run $ Write.write (Config.datastoreUser config) s
+    return ()
+
+userCreateSetup :: MonadIO m => UserCreate.Create -> m (R.Behavior (Maybe User.User))
+userCreateSetup userCreate = do
+  let tUserCreate = UserCreate.tUserCreate userCreate
+      eUserCreate = UI.rumors tUserCreate
+  R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
+
+userLoginSetup :: MonadIO m => UserLogin.Create -> m (R.Behavior (Maybe Db.DatabaseKey))
+userLoginSetup userLogin = do
+  let tUserLogin = UserLogin.tUserLogin userLogin
+      eUserLogin = UI.rumors tUserLogin
+  R.stepper Nothing $ Unsafe.head <$> R.unions [eUserLogin]
+
+userCreateFormSetup :: MonadIO m => UserCreate.Create -> m (R.Behavior (Maybe UserCreateForm.User))
+userCreateFormSetup userCreate = do
+  let tUserCreateForm = UserCreate.tUserCreateForm userCreate
+      eUserCreateForm = UI.rumors tUserCreateForm
+
+  let tUserCreate = UserCreate.tUserCreate userCreate
+      eUserCreate = UI.rumors tUserCreate
+
+  R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserCreateForm, Nothing <$ eUserCreate]
+
+userLoginFormSetup :: MonadIO m => UserLogin.Create -> m (R.Behavior (Maybe UserLoginForm.User))
+userLoginFormSetup userLogin = do
+  let tUserLoginForm = UserLogin.tUserLoginForm userLogin
+      eUserLoginForm = UI.rumors tUserLoginForm
+
+  let tUserLogin = UserLogin.tUserLogin userLogin
+      eUserLogin = UI.rumors tUserLogin
+
+  R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
+
+databaseUserSetup :: (Fix.MonadFix m, MonadIO m) => Either e (Db.Database User.User) -> UserCreate.Create -> m (R.Behavior (Db.Database User.User))
+databaseUserSetup databaseUser userCreate = mdo
+  let tUserCreate = UserCreate.tUserCreate userCreate
+      eUserCreate = UI.rumors tUserCreate
+  bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
+  return bDatabaseUser
