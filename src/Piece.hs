@@ -21,6 +21,7 @@ import qualified Piece.CakeSlayer.Error as Error
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
 import qualified Piece.Core.Loan as Loan
+import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time (time, unTime)
 import qualified Piece.Core.User as User
@@ -48,7 +49,8 @@ main port = do
       { UI.jsPort = Just port,
         UI.jsStatic = Just "./static",
         UI.jsCustomHTML = Just "index.html",
-        UI.jsWindowReloadOnDisconnect = False
+        UI.jsWindowReloadOnDisconnect = False,
+        UI.jsCallBufferMode = UI.NoBuffering
       }
     $ \window -> mdo
       -- READ
@@ -58,7 +60,6 @@ main port = do
       databaseUser <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreUser config)
       databasePrivilege <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastorePrivilege config)
       databaseToken <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreToken config)
-
       -- TIMER
       time <- liftIO $ Monad.runApp env $ Error.tryError Time.currentTime
       eTime <- Time.timer env
@@ -89,9 +90,6 @@ main port = do
       let tSelectionTab = Tab.tTabSelection tabs
           eSelectionTab = UI.rumors tSelectionTab
 
-      let tLoanFilter = LoanCreate.tLoanFilter loanCreate
-      let eLoanFilter = R.rumors tLoanFilter
-
       bTTL <- R.stepper (Time.secondsToNominalDiffTime 100) $ Unsafe.head <$> R.unions []
 
       bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
@@ -107,18 +105,6 @@ main port = do
           )
           $ Unsafe.head <$> R.unions []
 
-      bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions []
-      bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-      bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
-      bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
-      bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
-
-      bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
-      bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
-
       validate <- liftIO $ Monad.runApp env $ Token.validate
       let eToken = validate UI.<@> eTime
           (eInvalidToken, eValidToken) = UI.split eToken
@@ -126,6 +112,9 @@ main port = do
       bDatabaseToken <- R.stepper (fromRight Db.empty databaseToken) $ Unsafe.head <$> R.unions []
 
       userEnv <- userEnvSetup userCreate userLogin databaseUser
+      loanEnv <- loanEnvSetup loanCreate databaseLoan
+      roleEnv <- roleEnvSetup databaseRole
+      privilegeEnv <- privilegeEnvSetup databasePrivilege
 
       -- ENV
       let env =
@@ -140,20 +129,10 @@ main port = do
                   Env.TimeEnv
                     { bTime = bTime
                     },
-                loanEnv =
-                  Env.LoanEnv
-                    { bDatabaseLoan = bDatabaseLoan,
-                      bSelectionUser = bSelectionUser,
-                      bSelectionItem = bSelectionItem,
-                      bSelectionLoan = bSelectionLoan,
-                      bFilterUser = bFilterUser,
-                      bFilterItem = bFilterItem,
-                      bFilterLoan = bFilterLoan,
-                      bModalState = bModalState
-                    },
-                roleEnv = Env.RoleEnv {bDatabaseRole = bDatabaseRole},
+                loanEnv = loanEnv,
+                roleEnv = roleEnv,
                 userEnv = userEnv,
-                privilegeEnv = Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege},
+                privilegeEnv = privilegeEnv,
                 tokenEnv =
                   Env.TokenEnv
                     { bDatabaseToken = bDatabaseToken,
@@ -244,3 +223,39 @@ userEnvSetup userCreate userLogin databaseUser = do
         bUserLoginForm = bUserLoginForm,
         bUserLogin = bUserLogin
       }
+
+loanEnvSetup :: (MonadIO m, Fix.MonadFix m) => LoanCreate.Create -> Either e (Db.Database Loan.Loan) -> m Env.LoanEnv
+loanEnvSetup loanCreate databaseLoan = do
+  let tLoanFilter = LoanCreate.tLoanFilter loanCreate
+  let eLoanFilter = R.rumors tLoanFilter
+
+  bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions []
+  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
+  bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
+  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
+  bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
+
+  return $
+    Env.LoanEnv
+      { bDatabaseLoan = bDatabaseLoan,
+        bSelectionUser = bSelectionUser,
+        bSelectionItem = bSelectionItem,
+        bSelectionLoan = bSelectionLoan,
+        bFilterUser = bFilterUser,
+        bFilterItem = bFilterItem,
+        bFilterLoan = bFilterLoan,
+        bModalState = bModalState
+      }
+
+roleEnvSetup :: (MonadIO m, Fix.MonadFix m) => Either e (Db.Database Role.Role) -> m Env.RoleEnv
+roleEnvSetup databaseRole = do
+  bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
+  return $ Env.RoleEnv {bDatabaseRole = bDatabaseRole}
+
+privilegeEnvSetup :: (MonadIO m, Fix.MonadFix m) => Either e (Db.Database Privilege.Privilege) -> m Env.PrivilegeEnv
+privilegeEnvSetup databasePrivilege = do
+  bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
+  return $ Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege}
