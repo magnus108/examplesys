@@ -71,17 +71,8 @@ main port = do
       userLogin <- UserLogin.setup env
       xx <- UI.div UI.# UI.sink UI.text (Time.formatTime Time.defaultTimeLocale "%F, %T" . Time.unTime <$> bTime)
 
-      timeGui <- GuiTime.setup env bErr bSucc
-      let tTimeGuiSucc = GuiTime.userText timeGui
-          eTimeGuiSucc = UI.rumors tTimeGuiSucc
-      let tTimeGuiErr = GuiTime.errText timeGui
-          eTimeGuiErr = UI.rumors tTimeGuiErr
-
-      bErr <- UI.stepper Nothing $ Unsafe.head <$> R.unions [Nothing <$ eTimeGuiSucc, eTimeGuiErr]
-      bSucc <- UI.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTimeGuiSucc]
-
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element timeGui, UI.element userLogin]
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element xx, UI.element userLogin]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ listen config
