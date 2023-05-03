@@ -219,7 +219,7 @@ databaseTokenSetup config userLogin = mdo
 
 selectionTokenSetup :: (Fix.MonadFix m, MonadIO m) => m (R.Behavior (Maybe Db.DatabaseKey))
 selectionTokenSetup = do
-  R.stepper (Just 1) $ Unsafe.head <$> R.unions []
+  R.stepper (Just 0) $ Unsafe.head <$> R.unions []
 
 ttlSetup :: (Fix.MonadFix m, MonadIO m) => m (R.Behavior (Maybe Time.NominalDiffTime))
 ttlSetup = R.stepper (Just (Time.secondsToNominalDiffTime 100)) $ Unsafe.head <$> R.unions []
