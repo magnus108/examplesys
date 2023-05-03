@@ -16,7 +16,7 @@ import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified UnliftIO as MonadUnliftIO
 
-lookup :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Token.Token))
+-- lookup :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Token.Token))
 lookup = undefined
 
 {- do
@@ -24,7 +24,7 @@ tokenEnv <- Has.grab @Env.TokenEnv
 return $ flip Db.lookup <$> Env.bDatabaseToken tokenEnv
 -}
 
-getTime :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Time.Time))
+-- getTime :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Time.Time))
 getTime = undefined
 
 {- do
@@ -33,7 +33,7 @@ return $ (fmap Token.time .) <$> bLookup
 -}
 
 -- TODO this is ugly. Move to event
-validate :: (MonadUnliftIO.MonadUnliftIO m, MonadIO m, Time.MonadParseTime m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))
+-- validate :: (MonadUnliftIO.MonadUnliftIO m, MonadIO m, Time.MonadParseTime m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))
 validate = undefined
 
 {-

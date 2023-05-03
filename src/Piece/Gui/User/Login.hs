@@ -62,6 +62,6 @@ setup env = mdo
       eLogin = UI.click loginBtn
 
   bFindUser <- liftIO $ Monad.runApp env $ Behavior.bFindUser
-  let tUserLogin = UI.tidings (UserEnv.bUserLogin userEnv) $ bFindUser <*> bUserLoginForm UI.<@ eLogin
+  let tUserLogin = UI.tidings (UserEnv.bUserLogin userEnv) $ ($) <$> bFindUser <*> bUserLoginForm UI.<@ eLogin
 
   return Create {..}

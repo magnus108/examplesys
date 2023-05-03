@@ -15,5 +15,6 @@ data UserEnv = UserEnv
     bUserLoginForm :: R.Behavior (Maybe UserLoginForm.User),
     bUserLogin :: R.Behavior (Maybe Db.DatabaseKey),
     bDatabaseToken :: R.Behavior (Db.Database Token.Token),
-    bTTL :: R.Behavior Time.NominalDiffTime
+    bSelectionToken :: R.Behavior (Maybe Db.DatabaseKey),
+    bTTL :: R.Behavior (Maybe Time.NominalDiffTime)
   }
