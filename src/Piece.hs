@@ -10,8 +10,11 @@ import qualified Control.Monad.IO.Unlift as UnliftIO
 import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
 import qualified Data.Time.Format as Time
+import qualified Data.Time.LocalTime as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
+import qualified Graphics.UI.Threepenny.Events as UI
+import qualified Graphics.UI.Threepenny.Timer as UI
 import qualified Graphics.UI.Threepenny.Widgets as UI
 import qualified Piece.App.Env as Env
 import Piece.App.Monad (runApp)
@@ -24,7 +27,7 @@ import qualified Piece.Core.Loan as Loan
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
-import qualified Piece.Core.Time as Time (time, unTime)
+import qualified Piece.Core.Time as Time (Time, time, unTime)
 import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
@@ -36,12 +39,14 @@ import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.Tab as Tab
+import qualified Piece.Gui.Tab.Tab2 as Tab2
 import qualified Piece.Gui.Time.Time as GuiTime
 import qualified Piece.Gui.User.Create as UserCreate
 import qualified Piece.Gui.User.Login as UserLogin
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
+import System.Random
 
 main :: Int -> IO ()
 main port = do
@@ -54,7 +59,57 @@ main port = do
         UI.jsWindowReloadOnDisconnect = False,
         UI.jsCallBufferMode = UI.NoBuffering
       }
-    $ \window -> mdo
+    $ \window ->
+      void $ do
+        ((i, btn), sa) <- liftIO $
+          mdo
+            (env, ui, sa) <- Monad.runApp env $ mdo
+              -- databaseTab <- Error.tryError $ Read.read (Config.datastoreTab config)
+              traceShowM "a"
+              time <- Error.tryError Time.currentTime
+              traceShowM "a"
+              (te, th) <- liftIO $ R.newEvent
+              traceShowM "a"
+              traceShowM "a"
+              t <- liftIO $ UI.runUI window $ UI.timer UI.# UI.set UI.interval 1000 UI.# UI.set UI.running True
+
+              traceShowM "a"
+              btn <- liftIO $ UI.runUI window $ UI.button UI.#+ [UI.string "bob"]
+              bTime <- liftIO $ UI.runUI window $ R.stepper (0 :: Int) $ Unsafe.head <$> R.unions [te]
+
+              traceShowM "a"
+              i <- liftIO $ UI.runUI window $ UI.div UI.# UI.sink UI.text (show <$> bTime)
+
+              liftIO $ UI.runUI window $ UI.getBody window UI.#+ [UI.element i, UI.element btn]
+              traceShowM "b"
+
+              traceShowM "c"
+
+              sa <- liftIO $ UI.runUI window $ UI.liftIOLater $ do
+                x <- R.register (UI.tick t) $ \_ -> do
+                  time <- randomIO :: IO Int
+                  traceShowM time
+                  th time
+                return ()
+
+              traceShowM "x"
+              let env =
+                    Env.Env
+                      { window = window,
+                        tabEnv = undefined,
+                        timeEnv = undefined,
+                        loanEnv = undefined,
+                        roleEnv = undefined,
+                        userEnv = undefined,
+                        privilegeEnv = undefined
+                      }
+              traceShowM "d"
+              return (env, (btn, i), sa)
+            return (ui, sa)
+        traceShowM "mand"
+        traceShowM "ddada"
+
+{-
       -- READ
       databaseTab <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreTab config)
       -- TIMER
@@ -67,7 +122,8 @@ main port = do
       userLogin <- UserLogin.setup env
 
       tabs <- Tab.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs]
+      tabs2 <- Tab2.setup env
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element tabs2]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ listen config
@@ -105,26 +161,28 @@ main port = do
       roleEnv <- liftIO $ Monad.runApp env $ roleEnvSetup config
       privilegeEnv <- liftIO $ Monad.runApp env $ privilegeEnvSetup config
 
-      let env =
-            Env.Env
-              { tabEnv =
-                  Env.TabEnv
-                    { bDatabaseTab = bDatabaseTab,
-                      bSelectionTab = bSelectionTab,
-                      bViewMapTab = bViewMapTab
-                    },
-                timeEnv =
-                  Env.TimeEnv
-                    { bTime = bTime
-                    },
-                loanEnv = loanEnv,
-                roleEnv = roleEnv,
-                userEnv = userEnv,
-                privilegeEnv = privilegeEnv
-              }
+let env =
+      Env.Env
+        { window = window,
+          tabEnv =
+            Env.TabEnv
+              { bDatabaseTab = bDatabaseTab,
+                bSelectionTab = bSelectionTab,
+                bViewMapTab = bViewMapTab
+              },
+          timeEnv =
+            Env.TimeEnv
+              { bTime = bTime
+              },
+          loanEnv = loanEnv,
+          roleEnv = roleEnv,
+          userEnv = userEnv,
+          privilegeEnv = privilegeEnv
+        }
 
-      -- RETURN
-      return ()
+-- RETURN
+return ()
+-}
 
 listen ::
   ( MonadReader env m,
