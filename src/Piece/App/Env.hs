@@ -37,8 +37,7 @@ data Env (m :: Type -> Type) = Env
     timeEnv :: TimeEnv,
     userEnv :: UserEnv.UserEnv,
     roleEnv :: RoleEnv,
-    privilegeEnv :: PrivilegeEnv,
-    window :: UI.Window
+    privilegeEnv :: PrivilegeEnv
   }
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
   deriving (Has TabEnv) via Field "tabEnv" (Env m)
