@@ -7,6 +7,7 @@ common common-all
     build-depends:
         base >=4.16 && <5
         , monad-control
+        , random
         , bcrypt
         , ilist
         , time
@@ -37,6 +38,7 @@ common common-all
         Piece.App.Env
         Piece.App.UserEnv
         Piece.Gui.Tab.Tab
+        Piece.Gui.Tab.Tab2
         Piece.App.Error
         Piece.App.Monad
         Piece.CakeSlayer
