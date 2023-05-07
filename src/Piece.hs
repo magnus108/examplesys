@@ -35,8 +35,8 @@ import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Create as LoanCreate
-import qualified Piece.Gui.Tab.Tab as Tab
-import qualified Piece.Gui.Tab.Tab2 as Tab2
+import qualified Piece.Gui.Tab.TabButton as TabButton
+import qualified Piece.Gui.Tab.TabView as TabView
 import qualified Piece.Gui.Time.Time as GuiTime
 import qualified Piece.Gui.User.Create as UserCreate
 import qualified Piece.Gui.User.Login as UserLogin
@@ -67,9 +67,10 @@ main port = do
       userCreate <- UserCreate.setup env
       userLogin <- UserLogin.setup env
 
-      tabs <- Tab.setup env
-      tabs2 <- Tab2.setup env
-      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element tabs2]
+      -- tabs <- Tab.setup env
+      tabs <- TabButton.setup env
+      views <- TabView.setup env
+      _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element views]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ listen config
@@ -77,7 +78,7 @@ main port = do
       -- BEHAVIOR
 
       ---------TAB
-      let tSelectionTab = Tab.tTabSelection tabs
+      let tSelectionTab = TabButton.userSelection tabs
           eSelectionTab = UI.rumors tSelectionTab
 
       bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []

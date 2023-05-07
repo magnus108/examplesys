@@ -37,8 +37,8 @@ common common-all
         Piece.Core.Time
         Piece.App.Env
         Piece.App.UserEnv
-        Piece.Gui.Tab.Tab
-        Piece.Gui.Tab.Tab2
+        Piece.Gui.Tab.TabView
+        Piece.Gui.Tab.TabButton
         Piece.App.Error
         Piece.App.Monad
         Piece.CakeSlayer

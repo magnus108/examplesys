@@ -31,7 +31,6 @@ import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Loan.Behavior as Behavior
 import qualified Piece.Gui.Loan.Create as LoanCreate
-import qualified Piece.Gui.Tab.Tab as Tab
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
