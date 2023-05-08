@@ -1,6 +1,7 @@
 module Piece.Core.Tab
   ( Tab,
     name,
+    privilege,
     tab,
   )
 where

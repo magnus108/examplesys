@@ -1,6 +1,7 @@
 module Piece.Db.Token
   ( lookup,
     getTime,
+    getPrivilege,
     validate,
   )
 where
@@ -9,10 +10,16 @@ import qualified Data.Time.Clock as Time
 import qualified Piece.App.Env as Env
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
+import qualified Piece.Core.Privilege as Privilege
+import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
+import qualified Piece.Core.User as User
 import qualified Piece.Db.Db as DB
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Privilege as Privilege
+import qualified Piece.Db.Role as Role
+import qualified Piece.Db.User as User
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified UnliftIO as MonadUnliftIO
@@ -26,6 +33,29 @@ getTime :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Tim
 getTime = do
   bLookup <- lookup
   return $ (fmap Token.time .) <$> bLookup
+
+getUser :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe User.User))
+getUser = do
+  bLookup <- lookup
+  let bLookupUserId = (fmap Token.user .) <$> bLookup
+  bLookupUser <- User.lookup
+  return $ (>=>) <$> bLookupUserId <*> bLookupUser
+
+getRoles :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
+getRoles = do
+  bGetUser <- getUser
+  return $ (maybe [1] User.roles .) <$> bGetUser
+
+getRoles' :: (Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Role.Role]))
+getRoles' = do
+  bGetRoles <- getRoles
+  bLookupRole <- Role.lookup
+  return $ (\f g x -> catMaybes $ fmap f (g x)) <$> bLookupRole <*> bGetRoles
+
+getPrivilege :: (Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
+getPrivilege = do
+  bGetRoles <- getRoles'
+  return $ ((concat . fmap Role.privilege) .) <$> bGetRoles
 
 -- TODO refac
 validate :: (MonadIO m, Env.WithUserEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))

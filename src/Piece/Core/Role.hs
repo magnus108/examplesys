@@ -1,6 +1,7 @@
 module Piece.Core.Role
   ( Role,
     role,
+    privilege,
   )
 where
 
