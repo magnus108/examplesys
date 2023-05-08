@@ -14,18 +14,15 @@ import qualified Piece.CakeSlayer.Error as Error
 import qualified UnliftIO
 
 class (FromJSON a, Monad m) => MonadRead m a where
-  read :: FilePath -> m a
+  read :: FilePath -> m (Either () a)
 
 instance FromJSON a => MonadRead Monad.App a where
-  read = readImplSafe
+  read = readImpl
   {-# INLINE read #-}
 
-readImpl :: (MonadIO m, FromJSON a) => FilePath -> m a
-readImpl datastore = liftIO $ throwDecodeStrict =<< BS.readFile datastore
-
-readImplSafe :: (FromJSON a, UnliftIO.MonadUnliftIO m, E.As err E.UserError, E.WithError err m) => FilePath -> m a
-readImplSafe datastore = do
-  read' <- UnliftIO.tryAny $ readImpl datastore
-  case read' of
-    Right (Just x) -> return x
-    _ -> Error.throwError (E.as E.NotFound)
+readImpl :: (FromJSON a, UnliftIO.MonadUnliftIO m) => FilePath -> m (Either () a)
+readImpl datastore = do
+  read <- UnliftIO.tryAny $ liftIO $ throwDecodeStrict =<< BS.readFile datastore
+  case read of
+    Right x -> return (Right x)
+    Left y -> return (Left ())

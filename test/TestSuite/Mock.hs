@@ -7,6 +7,8 @@ module TestSuite.Mock
   )
 where
 
+import qualified Data.Time.Clock as Time
+import qualified Data.Time.Format as Time
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer as CakeSlayer
 import qualified Piece.Config as Config
@@ -42,7 +44,7 @@ mockEnv =
         Env.TokenEnv
           { bDatabaseToken = pure Db.empty,
             bSelectionToken = pure Nothing,
-            bTTL = pure 500
+            bTTL = pure (Just (Time.secondsToNominalDiffTime 100))
           }
     }
 

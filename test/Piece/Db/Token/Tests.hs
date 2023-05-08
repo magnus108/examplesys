@@ -51,9 +51,9 @@ tests =
                 ( MockEnv
                     { tokenEnv =
                         Env.TokenEnv
-                          { bDatabaseToken = pure (Db.create (Token.token "0" now) Db.empty),
+                          { bDatabaseToken = pure (Db.create (Token.token 0 now) Db.empty),
                             bSelectionToken = pure (Just 0),
-                            bTTL = pure (Time.secondsToNominalDiffTime 500)
+                            bTTL = pure (Just (Time.secondsToNominalDiffTime 500))
                           }
                     }
                 )
@@ -62,7 +62,7 @@ tests =
                 x <- Token.lookup
                 R.currentValue (x ?? 0)
             )
-      let value = Just (Token.token "0" now)
+      let value = Just (Token.token 0 now)
       value @=? lookup
 
     getTime = do
@@ -75,9 +75,9 @@ tests =
                 ( MockEnv
                     { tokenEnv =
                         Env.TokenEnv
-                          { bDatabaseToken = pure (Db.create (Token.token "0" now) Db.empty),
+                          { bDatabaseToken = pure (Db.create (Token.token 0 now) Db.empty),
                             bSelectionToken = pure (Just 0),
-                            bTTL = pure (Time.secondsToNominalDiffTime 500)
+                            bTTL = pure (Just (Time.secondsToNominalDiffTime 500))
                           }
                     }
                 )
@@ -99,9 +99,9 @@ tests =
                 ( MockEnv
                     { tokenEnv =
                         Env.TokenEnv
-                          { bDatabaseToken = pure (Db.create (Token.token "0" now) Db.empty),
+                          { bDatabaseToken = pure (Db.create (Token.token 0 now) Db.empty),
                             bSelectionToken = pure (Just 0),
-                            bTTL = pure (Time.secondsToNominalDiffTime 500)
+                            bTTL = pure (Just (Time.secondsToNominalDiffTime 500))
                           }
                     }
                 )
@@ -123,9 +123,9 @@ tests =
                 ( MockEnv
                     { tokenEnv =
                         Env.TokenEnv
-                          { bDatabaseToken = pure (Db.create (Token.token "0" now) Db.empty),
+                          { bDatabaseToken = pure (Db.create (Token.token 0 now) Db.empty),
                             bSelectionToken = pure (Just 0),
-                            bTTL = pure (Time.secondsToNominalDiffTime 500)
+                            bTTL = pure (Just (Time.secondsToNominalDiffTime 500))
                           }
                     }
                 )
@@ -147,9 +147,9 @@ tests =
                 ( MockEnv
                     { tokenEnv =
                         Env.TokenEnv
-                          { bDatabaseToken = pure (Db.create (Token.token "0" now) Db.empty),
+                          { bDatabaseToken = pure (Db.create (Token.token 0 now) Db.empty),
                             bSelectionToken = pure Nothing,
-                            bTTL = pure (Time.secondsToNominalDiffTime 500)
+                            bTTL = pure (Just (Time.secondsToNominalDiffTime 500))
                           }
                     }
                 )

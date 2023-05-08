@@ -27,5 +27,6 @@ tests =
     test = do
       let value = Db.create (Loan.loan "3") (Db.create (Loan.loan "2") (Db.create (Loan.loan "1") Db.empty))
       result <- runMockApp $ do
-        Read.read (Config.datastoreLoan mockConfig)
-      value @=? result
+        x <- Read.read (Config.datastoreLoan mockConfig)
+        return x
+      (Right value) @=? result

@@ -38,7 +38,7 @@ displayTab = do
   bShow <- showTab
   return $ (UI.string .) <$> bShow
 
-listBox :: (Env.WithUserEnv env m, Env.WithRoleEnv env m, Env.WithPrivilegeEnv env m, Env.WithTabEnv env m) => m (R.Behavior [Db.DatabaseKey])
+listBox :: (Env.WithUserEnv env m, Env.WithTokenEnv env m, Env.WithRoleEnv env m, Env.WithPrivilegeEnv env m, Env.WithTabEnv env m) => m (R.Behavior [Db.DatabaseKey])
 listBox = do
   tabEnv <- Has.grab @Env.TabEnv
   let bDatabaseTab = Env.bDatabaseTab tabEnv
@@ -46,7 +46,8 @@ listBox = do
   bPrivilegeTab <- privilegeTab
   currentPrivilege <- Token.getPrivilege
   userEnv <- Has.grab @UserEnv.UserEnv
-  let bSelectionToken = UserEnv.bSelectionToken userEnv
+  tokenEnv <- Has.grab @Env.TokenEnv
+  let bSelectionToken = Env.bSelectionToken tokenEnv
   let gg = fmap <$> currentPrivilege <*> bSelectionToken
   let gg2 = fromMaybe [0] <$> gg
   let gg3 = (\xs ys -> not (disjoint xs ys)) <$> gg2
@@ -56,7 +57,7 @@ listBox = do
       <*> bPrivilegeTab
       <*> bDatabaseTab
 
-displayViewTab :: (Env.WithPrivilegeEnv env m, Env.WithRoleEnv env m, Env.WithUserEnv env m, Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe (UI.UI UI.Element)))
+displayViewTab :: (Env.WithTokenEnv env m, Env.WithPrivilegeEnv env m, Env.WithRoleEnv env m, Env.WithUserEnv env m, Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe (UI.UI UI.Element)))
 displayViewTab = do
   tabEnv <- Has.grab @Env.TabEnv
   tabs <- listBox

@@ -4,6 +4,7 @@ module Piece.App.Env
   ( Env (..),
     LoanEnv (..),
     TabEnv (..),
+    TokenEnv (..),
     TimeEnv (..),
     RoleEnv (..),
     PrivilegeEnv (..),
@@ -13,6 +14,7 @@ module Piece.App.Env
     WithRoleEnv,
     WithUserEnv,
     WithPrivilegeEnv,
+    WithTokenEnv,
   )
 where
 
@@ -27,6 +29,7 @@ import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time
+import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import Piece.Db.Db (Database, DatabaseKey)
 import qualified Reactive.Threepenny as R
@@ -37,10 +40,12 @@ data Env (m :: Type -> Type) = Env
     timeEnv :: TimeEnv,
     userEnv :: UserEnv.UserEnv,
     roleEnv :: RoleEnv,
+    tokenEnv :: TokenEnv,
     privilegeEnv :: PrivilegeEnv
   }
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
   deriving (Has TabEnv) via Field "tabEnv" (Env m)
+  deriving (Has TokenEnv) via Field "tokenEnv" (Env m)
   deriving (Has TimeEnv) via Field "timeEnv" (Env m)
   deriving (Has UserEnv.UserEnv) via Field "userEnv" (Env m)
   deriving (Has RoleEnv) via Field "roleEnv" (Env m)
@@ -58,10 +63,18 @@ type WithRoleEnv env m = (MonadReader env m, Has RoleEnv env)
 
 type WithPrivilegeEnv env m = (MonadReader env m, Has PrivilegeEnv env)
 
+type WithTokenEnv env m = (MonadReader env m, Has TokenEnv env)
+
 data TabEnv = TabEnv
   { bDatabaseTab :: R.Behavior (Database Tab.Tab),
     bSelectionTab :: R.Behavior (Maybe DatabaseKey),
     bViewMapTab :: R.Behavior (Map.Map DatabaseKey (UI.UI UI.Element))
+  }
+
+data TokenEnv = TokenEnv
+  { bDatabaseToken :: R.Behavior (Database Token.Token),
+    bSelectionToken :: R.Behavior (Maybe DatabaseKey),
+    bTTL :: R.Behavior (Maybe Time.NominalDiffTime)
   }
 
 data TimeEnv = TimeEnv

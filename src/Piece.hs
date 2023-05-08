@@ -57,7 +57,7 @@ main port = do
       }
     $ \window -> mdo
       -- READ
-      databaseTab <- liftIO $ Monad.runApp env $ Error.tryError $ Read.read (Config.datastoreTab config)
+      databaseTab <- liftIO $ Monad.runApp env $ Read.read (Config.datastoreTab config)
       -- TIMER
       time <- liftIO $ Monad.runApp env $ Error.tryError Time.currentTime
       eTime <- Time.timer env
@@ -97,6 +97,7 @@ main port = do
 
       -- ENV hvorfor får jeg ik fejl?
       userEnv <- liftIO $ Monad.runApp env $ userEnvSetup config userCreate userLogin eTime
+      tokenEnv <- liftIO $ Monad.runApp env $ tokenEnvSetup config userCreate userLogin eTime
       loanEnv <- liftIO $ Monad.runApp env $ loanEnvSetup config loanCreate
       roleEnv <- liftIO $ Monad.runApp env $ roleEnvSetup config
       privilegeEnv <- liftIO $ Monad.runApp env $ privilegeEnvSetup config
@@ -116,6 +117,7 @@ main port = do
                 loanEnv = loanEnv,
                 roleEnv = roleEnv,
                 userEnv = userEnv,
+                tokenEnv = tokenEnv,
                 privilegeEnv = privilegeEnv
               }
 
@@ -127,6 +129,7 @@ listen ::
     Has.Has Env.LoanEnv env,
     Has.Has UserEnv.UserEnv env,
     Has.Has Env.TabEnv env,
+    Has.Has Env.TokenEnv env,
     Write.MonadWrite m (Db.Database Token.Token),
     Write.MonadWrite m (Db.Database Tab.Tab),
     Write.MonadWrite m (Db.Database Loan.Loan),
@@ -137,8 +140,9 @@ listen ::
   m ()
 listen config = do
   userEnv <- Has.grab @UserEnv.UserEnv
+  tokenEnv <- Has.grab @Env.TokenEnv
   let bDatabaseUser = UserEnv.bDatabaseUser userEnv
-  let bDatabaseToken = UserEnv.bDatabaseToken userEnv
+  let bDatabaseToken = Env.bDatabaseToken tokenEnv
   tabEnv <- Has.grab @Env.TabEnv
   let bDatabaseTab = Env.bDatabaseTab tabEnv
   loanEnv <- Has.grab @Env.LoanEnv
@@ -188,18 +192,18 @@ databaseUserSetup config userCreate = mdo
   databaseUser <- Read.read (Config.datastoreUser config)
   let tUserCreate = UserCreate.tUserCreate userCreate
       eUserCreate = UI.rumors tUserCreate
-  bDatabaseUser <- R.stepper databaseUser $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
+  bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> (R.filterJust eUserCreate)]
   return bDatabaseUser
 
-databaseTokenSetup :: (Env.WithTimeEnv env m, Env.WithUserEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Token.Token)) => Config.Config -> UserLogin.Create -> R.Event Time.Time -> m (R.Behavior (Db.Database Token.Token))
+databaseTokenSetup :: (Env.WithTokenEnv env m, Env.WithTimeEnv env m, Env.WithUserEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Token.Token)) => Config.Config -> UserLogin.Create -> R.Event Time.Time -> m (R.Behavior (Db.Database Token.Token))
 databaseTokenSetup config userLogin eTime = mdo
   databaseToken <- Read.read (Config.datastoreToken config)
 
   let tUserLogin = UserLogin.tUserLogin userLogin
       eUserLogin = UI.rumors tUserLogin
 
-  userEnv <- Has.grab @UserEnv.UserEnv
-  let bSelectionToken = UserEnv.bSelectionToken userEnv
+  tokenEnv <- Has.grab @Env.TokenEnv
+  let bSelectionToken = Env.bSelectionToken tokenEnv
 
   timeEnv <- Has.grab @Env.TimeEnv
   let bTime = Env.bTime timeEnv
@@ -211,7 +215,7 @@ databaseTokenSetup config userLogin eTime = mdo
       (eInvalidToken, eValidToken) = UI.split eValidateToken
 
   bDatabaseToken <-
-    R.stepper databaseToken $
+    R.stepper (fromRight Db.empty databaseToken) $
       Unsafe.head
         <$> R.unions
           [ flip . Db.update . Unsafe.fromJust <$> bSelectionToken <*> bDatabaseToken UI.<@> UI.filterJust eToken,
@@ -227,6 +231,18 @@ selectionTokenSetup = do
 ttlSetup :: (Fix.MonadFix m, MonadIO m) => m (R.Behavior (Maybe Time.NominalDiffTime))
 ttlSetup = R.stepper (Just (Time.secondsToNominalDiffTime 100)) $ Unsafe.head <$> R.unions []
 
+tokenEnvSetup :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithTimeEnv env m, MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database Token.Token), Read.MonadRead m (Db.Database User.User)) => Config.Config -> UserCreate.Create -> UserLogin.Create -> R.Event Time.Time -> m Env.TokenEnv
+tokenEnvSetup config userCreate userLogin eTime = do
+  bDatabaseToken <- databaseTokenSetup config userLogin eTime
+  bTTL <- ttlSetup
+  bSelectionToken <- selectionTokenSetup
+  return $
+    Env.TokenEnv
+      { bDatabaseToken = bDatabaseToken,
+        bTTL = bTTL,
+        bSelectionToken = bSelectionToken
+      }
+
 userEnvSetup :: (Env.WithUserEnv env m, Env.WithTimeEnv env m, MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database Token.Token), Read.MonadRead m (Db.Database User.User)) => Config.Config -> UserCreate.Create -> UserLogin.Create -> R.Event Time.Time -> m UserEnv.UserEnv
 userEnvSetup config userCreate userLogin eTime = do
   bUserCreateForm <- userCreateFormSetup userCreate
@@ -234,19 +250,13 @@ userEnvSetup config userCreate userLogin eTime = do
   bUserLoginForm <- userLoginFormSetup userLogin
   bUserLogin <- userLoginSetup userLogin
   bDatabaseUser <- databaseUserSetup config userCreate
-  bDatabaseToken <- databaseTokenSetup config userLogin eTime
-  bTTL <- ttlSetup
-  bSelectionToken <- selectionTokenSetup
   return $
     UserEnv.UserEnv
       { bDatabaseUser = bDatabaseUser,
         bUserCreate = bUserCreate,
         bUserCreateForm = bUserCreateForm,
         bUserLoginForm = bUserLoginForm,
-        bUserLogin = bUserLogin,
-        bDatabaseToken = bDatabaseToken,
-        bTTL = bTTL,
-        bSelectionToken = bSelectionToken
+        bUserLogin = bUserLogin
       }
 
 loanEnvSetup :: (MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database Loan.Loan)) => Config.Config -> LoanCreate.Create -> m Env.LoanEnv
@@ -255,7 +265,7 @@ loanEnvSetup config loanCreate = do
   let tLoanFilter = LoanCreate.tLoanFilter loanCreate
   let eLoanFilter = R.rumors tLoanFilter
 
-  bDatabaseLoan <- R.stepper databaseLoan $ Unsafe.head <$> R.unions []
+  bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions []
   bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
   bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
   bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
@@ -279,7 +289,7 @@ loanEnvSetup config loanCreate = do
 roleEnvSetup :: (MonadIO m, Fix.MonadFix m, Read.MonadRead m (Db.Database Role.Role)) => Config.Config -> m Env.RoleEnv
 roleEnvSetup config = do
   databaseRole <- Read.read (Config.datastoreRole config)
-  bDatabaseRole <- R.stepper databaseRole $ Unsafe.head <$> R.unions []
+  bDatabaseRole <- R.stepper (fromRight Db.empty databaseRole) $ Unsafe.head <$> R.unions []
   return $ Env.RoleEnv {bDatabaseRole = bDatabaseRole}
 
 privilegeEnvSetup ::
@@ -291,5 +301,5 @@ privilegeEnvSetup ::
   m Env.PrivilegeEnv
 privilegeEnvSetup config = do
   databasePrivilege <- Read.read (Config.datastorePrivilege config)
-  bDatabasePrivilege <- R.stepper databasePrivilege $ Unsafe.head <$> R.unions []
+  bDatabasePrivilege <- R.stepper (fromRight Db.empty databasePrivilege) $ Unsafe.head <$> R.unions []
   return $ Env.PrivilegeEnv {bDatabasePrivilege = bDatabasePrivilege}

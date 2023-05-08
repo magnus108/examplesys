@@ -24,45 +24,45 @@ import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified UnliftIO as MonadUnliftIO
 
-lookup :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Token.Token))
+lookup :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Token.Token))
 lookup = do
-  userEnv <- Has.grab @UserEnv.UserEnv
-  return $ flip Db.lookup <$> UserEnv.bDatabaseToken userEnv
+  tokenEnv <- Has.grab @Env.TokenEnv
+  return $ flip Db.lookup <$> Env.bDatabaseToken tokenEnv
 
-getTime :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Time.Time))
+getTime :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe Time.Time))
 getTime = do
   bLookup <- lookup
   return $ (fmap Token.time .) <$> bLookup
 
-getUser :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe User.User))
+getUser :: (Env.WithTokenEnv env m, Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe User.User))
 getUser = do
   bLookup <- lookup
   let bLookupUserId = (fmap Token.user .) <$> bLookup
   bLookupUser <- User.lookup
   return $ (>=>) <$> bLookupUserId <*> bLookupUser
 
-getRoles :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
+getRoles :: (Env.WithTokenEnv env m, Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
 getRoles = do
   bGetUser <- getUser
   return $ (maybe [1] User.roles .) <$> bGetUser
 
-getRoles' :: (Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Role.Role]))
+getRoles' :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Role.Role]))
 getRoles' = do
   bGetRoles <- getRoles
   bLookupRole <- Role.lookup
   return $ (\f g x -> catMaybes $ fmap f (g x)) <$> bLookupRole <*> bGetRoles
 
-getPrivilege :: (Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
+getPrivilege :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
 getPrivilege = do
   bGetRoles <- getRoles'
   return $ ((concat . fmap Role.privilege) .) <$> bGetRoles
 
 -- TODO refac
-validate :: (MonadIO m, Env.WithUserEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))
+validate :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))
 validate = do
-  userEnv <- Has.grab @UserEnv.UserEnv
-  let bTTL = UserEnv.bTTL userEnv
-  let bSelectionToken = UserEnv.bSelectionToken userEnv
+  tokenEnv <- Has.grab @Env.TokenEnv
+  let bTTL = Env.bTTL tokenEnv
+  let bSelectionToken = Env.bSelectionToken tokenEnv
   bTokenTime <- getTime
   return $
     ( \f ttl tokenKey now -> case tokenKey of
