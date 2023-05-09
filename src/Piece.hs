@@ -148,10 +148,10 @@ listen config = do
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
   UnliftIO.withRunInIO $ \run -> do
-    _ <- UI.liftIO $ R.onChange bDatabaseLoan $ \s -> run $ Write.write (Config.datastoreLoan config) s
-    _ <- UI.liftIO $ R.onChange bDatabaseTab $ \s -> run $ Write.write (Config.datastoreTab config) s
-    _ <- UI.liftIO $ R.onChange bDatabaseUser $ \s -> run $ Write.write (Config.datastoreUser config) s
-    _ <- UI.liftIO $ R.onChange bDatabaseToken $ \s -> run $ Write.write (Config.datastoreToken config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseLoan $ \s -> run $ void $ Write.write (Config.datastoreLoan config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseTab $ \s -> run $ void $ Write.write (Config.datastoreTab config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseUser $ \s -> run $ void $ Write.write (Config.datastoreUser config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseToken $ \s -> run $ void $ Write.write (Config.datastoreToken config) s
     return ()
 
 userCreateSetup :: MonadIO m => UserCreate.Create -> m (R.Behavior (Maybe User.User))

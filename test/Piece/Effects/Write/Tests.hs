@@ -28,4 +28,4 @@ tests =
       let value = Db.create (Loan.loan "3") (Db.create (Loan.loan "2") (Db.create (Loan.loan "1") Db.empty))
       result <- runMockApp $ do
         Write.write (Config.datastoreLoan mockConfig) value
-      () @=? result
+      Right () @=? result
