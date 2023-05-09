@@ -17,6 +17,7 @@ import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
+import qualified Relude.Unsafe as Unsafe
 import Test.Tasty
 import Test.Tasty.HUnit
 import TestSuite.Mock
@@ -43,7 +44,9 @@ tests =
   where
     lookupToken = do
       now <- runMockApp $ do
-        Time.currentTime
+        t <- Time.currentTime
+        return (Unsafe.fromJust (rightToMaybe t))
+
       lookup <-
         runMockApp $
           local
@@ -67,7 +70,8 @@ tests =
 
     getTime = do
       now <- runMockApp $ do
-        Time.currentTime
+        t <- Time.currentTime
+        return (Unsafe.fromJust (rightToMaybe t))
       lookup <-
         runMockApp $
           local
@@ -91,7 +95,8 @@ tests =
 
     valid = do
       now <- runMockApp $ do
-        Time.currentTime
+        t <- Time.currentTime
+        return (Unsafe.fromJust (rightToMaybe t))
       lookup <-
         runMockApp $
           local
@@ -115,7 +120,8 @@ tests =
 
     invalid = do
       now <- runMockApp $ do
-        Time.currentTime
+        t <- Time.currentTime
+        return (Unsafe.fromJust (rightToMaybe t))
       lookup <-
         runMockApp $
           local
@@ -139,7 +145,8 @@ tests =
 
     invalid2 = do
       now <- runMockApp $ do
-        Time.currentTime
+        t <- Time.currentTime
+        return (Unsafe.fromJust (rightToMaybe t))
       lookup <-
         runMockApp $
           local

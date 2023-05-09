@@ -59,7 +59,7 @@ setup env berr bsucc = mdo
   _view <- Elements.div UI.# UI.set UI.children [UI.getElement textEntry, _err]
 
   eParse <- liftIO $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
-    let e = R.unsafeMapIO (run . Error.tryError . Time.parseTime "%F, %T") eEntry
+    let e = R.unsafeMapIO (run . Time.parseTime "%F, %T") eEntry
     return e
 
   let tEntry = UI.userText textEntry

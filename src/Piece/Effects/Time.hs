@@ -20,35 +20,29 @@ import qualified Piece.Core.Time as Time
 import qualified UnliftIO
 
 class Monad m => MonadTime m where
-  currentTime :: m Time.Time
+  currentTime :: m (Either () Time.Time)
 
 instance MonadTime Monad.App where
-  currentTime = currentTimeImplSafe
+  currentTime = currentTimeImpl
   {-# INLINE currentTime #-}
 
-currentTimeImpl :: (MonadIO m) => m Time.Time
-currentTimeImpl = Time.time <$> liftIO Time.getCurrentTime
-
-currentTimeImplSafe :: (UnliftIO.MonadUnliftIO m, E.As err E.UserError, E.WithError err m) => m Time.Time
-currentTimeImplSafe = do
-  time <- UnliftIO.tryAny currentTimeImpl
+currentTimeImpl :: (UnliftIO.MonadUnliftIO m) => m (Either () Time.Time)
+currentTimeImpl = do
+  time <- UnliftIO.tryAny $ Time.time <$> liftIO Time.getCurrentTime
   case time of
-    Left _ -> Error.throwError (E.as E.NotFound)
-    Right y -> return y
+    Left _ -> return (Left ())
+    Right y -> return (Right y)
 
 class Monad m => MonadParseTime m where
-  parseTime :: String -> String -> m Time.Time
+  parseTime :: String -> String -> m (Either () Time.Time)
 
 instance MonadParseTime Monad.App where
-  parseTime = parseTimeImplSafe
+  parseTime = parseTimeImpl
   {-# INLINE parseTime #-}
 
-parseTimeImpl :: (MonadFail m) => String -> String -> m Time.Time
-parseTimeImpl x y = Time.time <$> Time.parseTimeM True Time.defaultTimeLocale x y
-
-parseTimeImplSafe :: (Env.WithTimeEnv env m, UnliftIO.MonadUnliftIO m, MonadFail m, E.As err E.UserError, E.WithError err m) => String -> String -> m Time.Time
-parseTimeImplSafe format x = do
-  parse <- UnliftIO.tryAny $ parseTimeImpl format x
+parseTimeImpl :: (Env.WithTimeEnv env m, UnliftIO.MonadUnliftIO m, MonadFail m) => String -> String -> m (Either () Time.Time)
+parseTimeImpl format x = do
+  parse <- UnliftIO.tryAny $ Time.time <$> Time.parseTimeM True Time.defaultTimeLocale format x
   case parse of
-    Left _ -> Error.throwError (E.as E.NotFound)
-    Right y -> return y
+    Left _ -> return (Left ())
+    Right y -> return (Right y)

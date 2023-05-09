@@ -10,6 +10,7 @@ import qualified Piece.App.Monad as Monad
 import qualified Piece.Core.Time as Time (Time)
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
+import qualified Relude.Unsafe as Unsafe
 
 timer :: Monad.AppEnv -> UI.UI (R.Event Time.Time)
 timer env = do
@@ -17,6 +18,6 @@ timer env = do
   (tE, tH) <- liftIO UI.newEvent
   _ <- liftIO $ R.register (UI.tick t) $ \_ -> do
     time <- liftIO $ Monad.runApp env Time.currentTime
-    tH time
+    tH (Unsafe.fromJust (rightToMaybe time))
   _ <- return t UI.# UI.set UI.interval 1000 UI.# UI.set UI.running True
   return tE

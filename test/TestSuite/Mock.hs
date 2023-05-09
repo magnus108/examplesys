@@ -21,10 +21,12 @@ import qualified Piece.Effects.Write as Write
 
 data MockEnv = MockEnv
   { loanEnv :: Env.LoanEnv,
-    tokenEnv :: Env.TokenEnv
+    tokenEnv :: Env.TokenEnv,
+    timeEnv :: Env.TimeEnv
   }
   deriving (CakeSlayer.Has Env.LoanEnv) via CakeSlayer.Field "loanEnv" MockEnv
   deriving (CakeSlayer.Has Env.TokenEnv) via CakeSlayer.Field "tokenEnv" MockEnv
+  deriving (CakeSlayer.Has Env.TimeEnv) via CakeSlayer.Field "timeEnv" MockEnv
 
 mockEnv :: MockEnv
 mockEnv =
@@ -40,6 +42,7 @@ mockEnv =
             bFilterLoan = pure "",
             bModalState = undefined
           },
+      timeEnv = Env.TimeEnv {bTime = undefined},
       tokenEnv =
         Env.TokenEnv
           { bDatabaseToken = pure Db.empty,

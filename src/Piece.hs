@@ -59,7 +59,7 @@ main port = do
       -- READ
       databaseTab <- liftIO $ Monad.runApp env $ Read.read (Config.datastoreTab config)
       -- TIMER
-      time <- liftIO $ Monad.runApp env $ Error.tryError Time.currentTime
+      time <- liftIO $ Monad.runApp env $ Time.currentTime
       eTime <- Time.timer env
 
       -- GUI
