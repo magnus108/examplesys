@@ -48,7 +48,7 @@ listBox = do
   userEnv <- Has.grab @UserEnv.UserEnv
   tokenEnv <- Has.grab @Env.TokenEnv
   let bSelectionToken = Env.bSelectionToken tokenEnv
-  let gg = fmap <$> currentPrivilege <*> bSelectionToken
+  let gg = (=<<) <$> currentPrivilege <*> bSelectionToken
   let gg2 = fromMaybe [0] <$> gg
   let gg3 = (\xs ys -> not (disjoint xs ys)) <$> gg2
   return $

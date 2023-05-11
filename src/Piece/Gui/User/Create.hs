@@ -21,6 +21,7 @@ import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.User as User
 import qualified Piece.Gui.Checkbox.Checkbox as Checkbox
 import qualified Piece.Gui.User.Behavior as Behavior
 import qualified Reactive.Threepenny as R
@@ -65,20 +66,9 @@ setup env = mdo
       eCreate = UI.click createBtn
 
   eCreate' <- liftIO $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
-    let e = R.unsafeMapIO (run . createUser) (bUserCreateForm UI.<@ eCreate)
+    let e = R.unsafeMapIO (run . User.create) (bUserCreateForm UI.<@ eCreate)
     return e
 
   let tUserCreate = UI.tidings (UserEnv.bUserCreate userEnv) $ eCreate'
 
   return Create {..}
-
-createUser :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
-createUser form = do
-  let formName = UserCreateForm.name form
-      formPassword = UserCreateForm.password form
-      formAdmin = UserCreateForm.admin form
-      roles = if formAdmin then [0, 1] else [0]
-  password <- Password.mkPasswordHash formPassword
-  return $ case password of
-    Nothing -> Nothing
-    Just p -> Just (User.user formName p roles)
