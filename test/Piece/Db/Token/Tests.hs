@@ -22,12 +22,19 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import TestSuite.Mock
 import TestSuite.Util
+import TestSuite.Util (equals)
 
 tests :: TestTree
 tests =
   testGroup "Piece.Db.Token.Tests" $
     concat
       [ fromAssertions
+          "lookup2"
+          [ do
+              let action = return True
+              env & succeeds action
+          ],
+        fromAssertions
           "lookup"
           [ lookupToken
           ],
@@ -42,6 +49,8 @@ tests =
           ]
       ]
   where
+    env = mockEnv
+
     lookupToken = do
       now <- runMockApp $ do
         t <- Time.currentTime

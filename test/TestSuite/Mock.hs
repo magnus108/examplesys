@@ -3,7 +3,9 @@
 module TestSuite.Mock
   ( runMockApp,
     MockEnv (..),
+    MockApp,
     mockConfig,
+    mockEnv,
   )
 where
 
