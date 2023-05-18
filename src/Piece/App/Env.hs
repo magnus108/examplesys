@@ -67,8 +67,7 @@ type WithTokenEnv env m = (MonadReader env m, Has TokenEnv env)
 
 data TabEnv = TabEnv
   { bDatabaseTab :: R.Behavior (Database Tab.Tab),
-    bSelectionTab :: R.Behavior (Maybe DatabaseKey),
-    bViewMapTab :: R.Behavior (Map.Map DatabaseKey (UI.UI UI.Element))
+    bSelectionTab :: R.Behavior (Maybe DatabaseKey)
   }
 
 data TokenEnv = TokenEnv

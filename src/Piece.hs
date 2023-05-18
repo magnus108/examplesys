@@ -6,6 +6,7 @@ module Piece
     timeEnvSetup,
     userEnvSetup,
     privilegeEnvSetup,
+    tabEnvSetup,
   )
 where
 
@@ -60,43 +61,22 @@ main port = do
         UI.jsCallBufferMode = UI.NoBuffering
       }
     $ \window -> mdo
-      -- READ
-      databaseTab <- liftIO $ Monad.runApp env $ Read.read (Config.datastoreTab config)
-
       -- GUI
       loanCreate <- LoanCreate.setup env
       userCreate <- UserCreate.setup env
       userLogin <- UserLogin.setup env
 
-      -- tabs <- Tab.setup env
+      let tabViews = [UI.getElement loanCreate, UI.getElement userCreate, UI.getElement userLogin]
       tabs <- TabButton.setup env
-      views <- TabView.setup env
+      views <- TabView.setup env tabViews
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element views]
 
       -- LISTEN
       _ <- UI.liftIOLater $ Monad.runApp env $ listen config
 
       -- BEHAVIOR
-
-      ---------TAB
-      let tSelectionTab = TabButton.userSelection tabs
-          eSelectionTab = UI.rumors tSelectionTab
-
-      bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions []
-      bSelectionTab <- R.stepper (Just 0) $ Unsafe.head <$> R.unions [eSelectionTab]
-      bViewMapTab <-
-        R.stepper
-          ( Map.fromList
-              [ (0, UI.element loanCreate),
-                (1, UI.element userCreate),
-                (2, UI.element userLogin)
-              ]
-          )
-          $ Unsafe.head <$> R.unions []
-
       eTime <- Time.timer env
 
-      -- ENV hvorfor får jeg ik fejl?
       let tUserCreate = UserCreate.tUserCreate userCreate
           eUserCreate = UI.rumors tUserCreate
       let tUserCreateForm = UserCreate.tUserCreateForm userCreate
@@ -108,21 +88,20 @@ main port = do
       let tUserLogin = UserLogin.tUserLogin userLogin
           eUserLogin = UI.rumors tUserLogin
 
+      let tSelectionTab = TabButton.userSelection tabs
+          eSelectionTab = UI.rumors tSelectionTab
+
       timeEnv <- liftIO $ Monad.runApp env $ timeEnvSetup config eTime
       userEnv <- liftIO $ Monad.runApp env $ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime
       tokenEnv <- liftIO $ Monad.runApp env $ tokenEnvSetup config userCreate userLogin eTime
       loanEnv <- liftIO $ Monad.runApp env $ loanEnvSetup config loanCreate
       roleEnv <- liftIO $ Monad.runApp env $ roleEnvSetup config R.never
       privilegeEnv <- liftIO $ Monad.runApp env $ privilegeEnvSetup config R.never
+      tabEnv <- liftIO $ Monad.runApp env $ tabEnvSetup config R.never eSelectionTab
 
       let env =
             Env.Env
-              { tabEnv =
-                  Env.TabEnv
-                    { bDatabaseTab = bDatabaseTab,
-                      bSelectionTab = bSelectionTab,
-                      bViewMapTab = bViewMapTab
-                    },
+              { tabEnv = tabEnv,
                 timeEnv = timeEnv,
                 loanEnv = loanEnv,
                 roleEnv = roleEnv,
@@ -171,6 +150,17 @@ timeEnvSetup config eTime = do
   return $
     Env.TimeEnv
       { Env.bTime = bTime
+      }
+
+tabEnvSetup :: (Read.MonadRead m (Db.Database Tab.Tab), MonadIO m) => Config.Config -> R.Event (Db.Database Tab.Tab) -> R.Event (Maybe Db.DatabaseKey) -> m (Env.TabEnv)
+tabEnvSetup config eTab eSelectionTab = do
+  databaseTab <- Read.read (Config.datastoreTab config)
+  bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions [eTab]
+  bSelectionTab <- R.stepper (Just 0) $ Unsafe.head <$> R.unions [eSelectionTab]
+  return $
+    Env.TabEnv
+      { bDatabaseTab = bDatabaseTab,
+        bSelectionTab = bSelectionTab
       }
 
 userCreateSetup :: MonadIO m => R.Event (Maybe User.User) -> m (R.Behavior (Maybe User.User))

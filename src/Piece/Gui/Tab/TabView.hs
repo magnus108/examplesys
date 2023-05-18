@@ -24,12 +24,12 @@ data Create = Create
 instance UI.Widget Create where
   getElement = view
 
-setup :: Monad.AppEnv -> UI.UI Create
-setup env = mdo
+setup :: Monad.AppEnv -> [UI.Element] -> UI.UI Create
+setup env tabs = mdo
   view <- UI.div UI.# UI.sink items (fromMaybe (UI.string "not found") <$> bDisplayViewTab')
   tabEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.TabEnv
-  bDisplayViewTab <- liftIO $ Monad.runApp env $ Behavior.displayViewTab
-  let bDisplayViewTab' = (=<<) <$> bDisplayViewTab <*> bSelection
+  bDisplayViewTab <- liftIO $ Monad.runApp env $ Behavior.displayViewTab tabs
+  let bDisplayViewTab' = (\f y -> y >>= (\z -> ((\x -> UI.element x) <$> (f z)))) <$> bDisplayViewTab <*> bSelection
 
   let bSelection = Env.bSelectionTab tabEnv
 

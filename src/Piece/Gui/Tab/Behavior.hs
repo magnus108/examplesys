@@ -57,10 +57,10 @@ listBox = do
       <*> bPrivilegeTab
       <*> bDatabaseTab
 
-displayViewTab :: (Env.WithTokenEnv env m, Env.WithPrivilegeEnv env m, Env.WithRoleEnv env m, Env.WithUserEnv env m, Env.WithTabEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe (UI.UI UI.Element)))
-displayViewTab = do
+displayViewTab :: (Env.WithTokenEnv env m, Env.WithPrivilegeEnv env m, Env.WithRoleEnv env m, Env.WithUserEnv env m, Env.WithTabEnv env m) => [UI.Element] -> m (R.Behavior (Db.DatabaseKey -> Maybe (UI.Element)))
+displayViewTab tabsViews = do
   tabEnv <- Has.grab @Env.TabEnv
   tabs <- listBox
-  let bMap = flip Map.restrictKeys . Set.fromList <$> tabs <*> (Env.bViewMapTab tabEnv)
-  let bView = flip Map.lookup <$> bMap -- (Env.bViewMapTab tabEnv)
+  let bMap = (\k -> Map.restrictKeys (Map.fromList (zip [0 ..] tabsViews)) (Set.fromList k)) <$> tabs
+  let bView = flip Map.lookup <$> bMap
   return $ bView

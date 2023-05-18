@@ -24,6 +24,7 @@ import qualified Piece.Core.Loan as Loan
 import Piece.Core.Privilege (Privilege)
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
+import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
@@ -40,23 +41,27 @@ data MockEnv = MockEnv
     timeEnv :: Env.TimeEnv,
     roleEnv :: Env.RoleEnv,
     privilegeEnv :: Env.PrivilegeEnv,
+    tabEnv :: Env.TabEnv,
     userEnv :: UserEnv.UserEnv,
     hToken :: R.Handler (Maybe Token.Token), -- should reflect app events
     hUser :: R.Handler (Maybe User.User), -- should reflect app events
     hRole :: R.Handler (Role.Role), -- should reflect app events this will never
     hPrivilege :: R.Handler (Privilege.Privilege), -- should reflect app events this will never
-    hTime :: R.Handler Time.Time -- should reflect app events this will never
+    hTime :: R.Handler Time.Time, -- should reflect app events this will never
+    hTab :: R.Handler Tab.Tab -- should reflect app events this will never
   }
   deriving (CakeSlayer.Has Env.LoanEnv) via CakeSlayer.Field "loanEnv" MockEnv
   deriving (CakeSlayer.Has Env.TokenEnv) via CakeSlayer.Field "tokenEnv" MockEnv
   deriving (CakeSlayer.Has Env.TimeEnv) via CakeSlayer.Field "timeEnv" MockEnv
   deriving (CakeSlayer.Has UserEnv.UserEnv) via CakeSlayer.Field "userEnv" MockEnv
   deriving (CakeSlayer.Has Env.RoleEnv) via CakeSlayer.Field "roleEnv" MockEnv
+  deriving (CakeSlayer.Has Env.TabEnv) via CakeSlayer.Field "tabEnv" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Maybe Token.Token))) via CakeSlayer.Field "hToken" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Maybe User.User))) via CakeSlayer.Field "hUser" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Role.Role))) via CakeSlayer.Field "hRole" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Privilege.Privilege))) via CakeSlayer.Field "hPrivilege" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Time.Time))) via CakeSlayer.Field "hTime" MockEnv
+  deriving (CakeSlayer.Has (R.Handler (Tab.Tab))) via CakeSlayer.Field "hTab" MockEnv
 
 mockEnv :: MockApp MockEnv
 mockEnv = mdo
@@ -82,6 +87,10 @@ mockEnv = mdo
   (ePrivilege, hPrivilege) <- liftIO $ R.newEvent
   privilegeEnv <- privilegeEnvSetup config (flip Db.create <$> (Env.bDatabasePrivilege privilegeEnv) UI.<@> ePrivilege)
 
+  -- Tab
+  (eTab, hTab) <- liftIO $ R.newEvent
+  tabEnv <- tabEnvSetup config (flip Db.create <$> (Env.bDatabaseTab tabEnv) UI.<@> eTab) R.never
+
   return $
     MockEnv
       { loanEnv =
@@ -105,6 +114,7 @@ mockEnv = mdo
         userEnv = userEnv,
         roleEnv = roleEnv,
         privilegeEnv = privilegeEnv,
+        tabEnv = tabEnv,
         hToken = hToken,
         hRole = hRole,
         hPrivilege = hPrivilege,
