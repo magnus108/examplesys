@@ -11,13 +11,15 @@ import qualified Piece.Core.Time as Time (Time)
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
+import UnliftIO
 
-timer :: Monad.AppEnv -> UI.UI (R.Event Time.Time)
-timer env = do
-  t <- UI.timer
+timer :: (Time.MonadTime m, MonadUnliftIO m) => UI.Window -> m (R.Event Time.Time)
+timer window = do
+  t <- liftIO $ UI.runUI window UI.timer
   (tE, tH) <- liftIO UI.newEvent
-  _ <- liftIO $ R.register (UI.tick t) $ \_ -> do
-    time <- liftIO $ Monad.runApp env Time.currentTime
-    tH (Unsafe.fromJust (rightToMaybe time))
-  _ <- return t UI.# UI.set UI.interval 1000 UI.# UI.set UI.running True
+
+  _ <- UnliftIO.withRunInIO $ \run -> R.register (UI.tick t) $ \_ -> run $ do
+    time <- Time.currentTime
+    liftIO $ tH (Unsafe.fromJust (rightToMaybe time))
+  _ <- liftIO $ UI.runUI window $ return t UI.# UI.set UI.interval 1000 UI.# UI.set UI.running True
   return tE

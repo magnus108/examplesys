@@ -5,12 +5,17 @@ module Piece.Db.Token.Tests
   )
 where
 
+import Data.Text (pack)
 import qualified Data.Time as Time
 import qualified Piece.CakeSlayer.Has as Has
+import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
+import qualified Piece.Core.User as User
+import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
+import qualified Piece.Db.User as User
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -57,7 +62,6 @@ tests =
               let value = Token.user <$> currentToken
               liftIO $ value @=? currentUserId
           ],
-        {-
         fromAssertions
           "getUser"
           [ runMockApp $ do
@@ -67,9 +71,8 @@ tests =
               liftIO $ hUser user
 
               -- createToken. skal bruge user db key
-              token <- Token.createNow
-              hToken <- Has.grab @(R.Handler (Maybe Token.Token))
-              liftIO $ hToken (Just token)
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
 
               -- createToken
               x <- Token.getUser
@@ -77,6 +80,7 @@ tests =
               let value = user
               liftIO $ value @=? currentUser
           ],
+        {-
         fromAssertions
           "getRoleIds"
           [ runMockApp $ do
@@ -223,7 +227,7 @@ tests =
               liftIO $ hUserLogin (Just 0)
               validate <- Token.validate
               getTime <- Token.getTime
-              time <- fmap (\t -> Time.time (Time.addUTCTime (Time.secondsToNominalDiffTime 1000) (Time.unTime t))) <$> R.currentValue (getTime ?? 0)
+              time <- fmap (Time.time . Time.addUTCTime (Time.secondsToNominalDiffTime 1000) . Time.unTime) <$> R.currentValue (getTime ?? 0)
               currentTokenKey <- R.currentValue ((=<<) <$> validate <*> pure time)
               let value = Nothing
               liftIO $ value @=? currentTokenKey

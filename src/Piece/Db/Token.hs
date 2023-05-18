@@ -14,9 +14,7 @@ where
 
 import Data.Profunctor
 import qualified Data.Time as Time
-import qualified Data.Time.Clock as Time
 import Data.Tuple.Extra
-import Piece.App.Env (TokenEnv (bSelectionToken))
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Role as Role
@@ -88,7 +86,7 @@ tokenDiffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time
 tokenDiffTime = do
   bTokenTime <- getTime
   bDiffTime <- diffTime
-  return $ (\f -> curry . (fmap snd .) . guarded . lmap (secondM f) . maybe False . uncurry) <$> bTokenTime <*> bDiffTime
+  return $ (\f -> curry . (fmap snd .) . guarded . lmap (secondM f) . maybe True . uncurry) <$> bTokenTime <*> bDiffTime
 
 validate :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Maybe DB.DatabaseKey))
 validate = do
