@@ -215,7 +215,7 @@ tests =
               liftIO $ hToken (Just token)
               x <- Token.validate
               currentTokenKey <- R.currentValue (x ?? now)
-              let value = Just (now, 0)
+              let value = Just 0
               liftIO $ value @=? currentTokenKey,
             runMockApp $ do
               now <- Unsafe.fromJust . rightToMaybe <$> Time.currentTime

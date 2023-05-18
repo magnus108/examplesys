@@ -79,18 +79,23 @@ lessThanTTL = do
   let bTTL = Env.bTTL tokenEnv
   return $ maybe (const False) (>) <$> bTTL
 
-diffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Db.DatabaseKey -> Maybe (Time.Time, Db.DatabaseKey)))
+diffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Time.Time -> Bool))
 diffTime = do
-  bTokenTime <- getTime
   bLessThanTTL <- lessThanTTL
-  return $ (\f -> curry . guarded . lmap (secondM f) . maybe False . lmap (uncurry Time.diffTime)) <$> bTokenTime <*> bLessThanTTL
+  return $ (curry . lmap (uncurry Time.diffTime)) <$> bLessThanTTL
 
-validate :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Maybe (Time.Time, DB.DatabaseKey)))
-validate = do
+tokenDiffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Db.DatabaseKey -> Maybe Db.DatabaseKey))
+tokenDiffTime = do
+  bTokenTime <- getTime
   bDiffTime <- diffTime
+  return $ (\f -> curry . (fmap snd .) . guarded . lmap (secondM f) . maybe False . uncurry) <$> bTokenTime <*> bDiffTime
+
+validate :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Maybe DB.DatabaseKey))
+validate = do
+  bTokenDiffTime <- tokenDiffTime
   tokenEnv <- Has.grab @Env.TokenEnv
   let bSelectionToken = Env.bSelectionToken tokenEnv
   return $
     (\diffTime mtoken now -> mtoken >>= \token -> diffTime now token)
-      <$> bDiffTime
+      <$> bTokenDiffTime
       <*> bSelectionToken
