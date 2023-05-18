@@ -6,12 +6,17 @@ module Piece.Db.Token
     getRoleIds,
     getRoles,
     getPrivilege,
-    validate,
+    lessThanTTL,
     createNow,
+    validate,
   )
 where
 
+import Data.Profunctor
+import qualified Data.Time as Time
 import qualified Data.Time.Clock as Time
+import Data.Tuple.Extra
+import Piece.App.Env (TokenEnv (bSelectionToken))
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Role as Role
@@ -68,27 +73,24 @@ getPrivilege = do
   bGetRoles <- getRoles
   return $ (fmap (>>= Role.privilege) .) <$> bGetRoles
 
--- TODO refac
-validate :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Either () DB.DatabaseKey))
-validate = do
+lessThanTTL :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.NominalDiffTime -> Bool))
+lessThanTTL = do
   tokenEnv <- Has.grab @Env.TokenEnv
   let bTTL = Env.bTTL tokenEnv
-  let bSelectionToken = Env.bSelectionToken tokenEnv
+  return $ maybe (const False) (>) <$> bTTL
+
+diffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Db.DatabaseKey -> Maybe (Time.Time, Db.DatabaseKey)))
+diffTime = do
   bTokenTime <- getTime
+  bLessThanTTL <- lessThanTTL
+  return $ (\f -> curry . guarded . lmap (secondM f) . maybe False . lmap (uncurry Time.diffTime)) <$> bTokenTime <*> bLessThanTTL
+
+validate :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Maybe (Time.Time, DB.DatabaseKey)))
+validate = do
+  bDiffTime <- diffTime
+  tokenEnv <- Has.grab @Env.TokenEnv
+  let bSelectionToken = Env.bSelectionToken tokenEnv
   return $
-    ( \f ttl tokenKey now -> case tokenKey of
-        Nothing -> Left ()
-        Just k ->
-          let tokenTime = f k
-           in case tokenTime of
-                Nothing -> Left ()
-                Just t ->
-                  case ttl of
-                    Nothing -> Right k
-                    Just ttl' ->
-                      let diffTime = Time.diffUTCTime (Time.unTime now) (Time.unTime t)
-                       in if ttl' < diffTime then Left () else Right k
-    )
-      <$> bTokenTime
-      <*> bTTL
+    (\diffTime mtoken now -> mtoken >>= \token -> diffTime now token)
+      <$> bDiffTime
       <*> bSelectionToken

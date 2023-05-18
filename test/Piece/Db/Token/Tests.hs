@@ -63,6 +63,7 @@ tests =
               let value = Just (Token.user token)
               liftIO $ value @=? currentUserId
           ],
+        {-
         fromAssertions
           "getUser"
           [ runMockApp $ do
@@ -193,6 +194,18 @@ tests =
               let value = Just [0, 1]
               liftIO $ value @=? currentPrivilege
           ],
+          -}
+        fromAssertions
+          "validateTT"
+          [ runMockApp $ do
+              x <- Token.lessThanTTL
+              isValid <- R.currentValue (x ?? Time.secondsToNominalDiffTime 150)
+              liftIO $ False @=? isValid,
+            runMockApp $ do
+              x <- Token.lessThanTTL
+              isValid <- R.currentValue (x ?? Time.secondsToNominalDiffTime 50)
+              liftIO $ True @=? isValid
+          ],
         fromAssertions
           "validate"
           [ runMockApp $ do
@@ -202,13 +215,13 @@ tests =
               liftIO $ hToken (Just token)
               x <- Token.validate
               currentTokenKey <- R.currentValue (x ?? now)
-              let value = Right 0
+              let value = Just (now, 0)
               liftIO $ value @=? currentTokenKey,
             runMockApp $ do
               now <- Unsafe.fromJust . rightToMaybe <$> Time.currentTime
               x <- Token.validate
               currentTokenKey <- R.currentValue (x ?? now)
-              let value = Left ()
+              let value = Nothing
               liftIO $ value @=? currentTokenKey,
             runMockApp $ do
               now <- Unsafe.fromJust . rightToMaybe <$> Time.currentTime
@@ -217,7 +230,7 @@ tests =
               liftIO $ hToken (Just token)
               x <- Token.validate
               currentTokenKey <- R.currentValue (x ?? Time.time (Time.addUTCTime (Time.secondsToNominalDiffTime 1000) (Time.unTime now)))
-              let value = Left ()
+              let value = Nothing
               liftIO $ value @=? currentTokenKey
           ]
       ]

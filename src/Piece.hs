@@ -212,14 +212,13 @@ databaseTokenSetup config userLogin eTime = mdo
 
   bValidate <- Token.validate
   let eValidateToken = bValidate UI.<@> eTime
-      (eInvalidToken, eValidToken) = UI.split eValidateToken
 
   bDatabaseToken <-
     R.stepper (fromRight Db.empty databaseToken) $
       Unsafe.head
         <$> R.unions
           [ flip . Db.update . Unsafe.fromJust <$> bSelectionToken <*> bDatabaseToken UI.<@> UI.filterJust eToken,
-            Db.delete . Unsafe.fromJust <$> bSelectionToken <*> bDatabaseToken UI.<@ eInvalidToken
+            Db.delete . Unsafe.fromJust <$> bSelectionToken <*> bDatabaseToken UI.<@ R.filterE isNothing eValidateToken
           ]
 
   return bDatabaseToken
