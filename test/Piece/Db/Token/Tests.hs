@@ -5,19 +5,12 @@ module Piece.Db.Token.Tests
   )
 where
 
-import Data.Text (pack)
 import qualified Data.Time as Time
 import qualified Piece.CakeSlayer.Has as Has
-import qualified Piece.CakeSlayer.Password as Password
-import qualified Piece.Core.Privilege as Privilege
-import Piece.Core.Role (Role (privilege))
-import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
-import qualified Piece.Core.User as User
-import qualified Piece.Core.UserCreateForm as UserCreateForm
+import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
-import qualified Piece.Db.User as User
 import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -33,34 +26,35 @@ tests =
       [ fromAssertions
           "lookup"
           [ runMockApp $ do
-              token <- Token.createNow
-              hToken <- Has.grab @(R.Handler (Maybe Token.Token))
-              liftIO $ hToken (Just token)
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
               x <- Token.lookup
               currentToken <- R.currentValue (x ?? 0)
-              let value = Just token
-              liftIO $ value @=? currentToken
+              let value = Just 0
+              liftIO $ value @=? (Token.user <$> currentToken)
           ],
         fromAssertions
           "getTime"
           [ runMockApp $ do
-              token <- Token.createNow
-              hToken <- Has.grab @(R.Handler (Maybe Token.Token))
-              liftIO $ hToken (Just token)
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
               x <- Token.getTime
+              lookup <- Token.lookup
+              currentToken <- R.currentValue (lookup ?? 0)
               currentTime <- R.currentValue (x ?? 0)
-              let value = Just (Token.time token)
+              let value = Token.time <$> currentToken
               liftIO $ value @=? currentTime
           ],
         fromAssertions
           "getUserId"
           [ runMockApp $ do
-              token <- Token.createNow
-              hToken <- Has.grab @(R.Handler (Maybe Token.Token))
-              liftIO $ hToken (Just token)
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
               x <- Token.getUserId
+              lookup <- Token.lookup
+              currentToken <- R.currentValue (lookup ?? 0)
               currentUserId <- R.currentValue (x ?? 0)
-              let value = Just (Token.user token)
+              let value = Token.user <$> currentToken
               liftIO $ value @=? currentUserId
           ],
         {-
@@ -209,27 +203,28 @@ tests =
         fromAssertions
           "validate"
           [ runMockApp $ do
-              now <- Unsafe.fromJust . rightToMaybe <$> Time.currentTime
-              let token = Token.token 0 now
-              hToken <- Has.grab @(R.Handler (Maybe Token.Token))
-              liftIO $ hToken (Just token)
-              x <- Token.validate
-              currentTokenKey <- R.currentValue (x ?? now)
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              validate <- Token.validate
+              getTime <- Token.getTime
+              time <- R.currentValue (getTime ?? 0)
+              currentTokenKey <- R.currentValue ((=<<) <$> validate <*> pure time)
               let value = Just 0
               liftIO $ value @=? currentTokenKey,
             runMockApp $ do
-              now <- Unsafe.fromJust . rightToMaybe <$> Time.currentTime
-              x <- Token.validate
-              currentTokenKey <- R.currentValue (x ?? now)
+              validate <- Token.validate
+              getTime <- Token.getTime
+              time <- R.currentValue (getTime ?? 0)
+              currentTokenKey <- R.currentValue ((=<<) <$> validate <*> pure time)
               let value = Nothing
               liftIO $ value @=? currentTokenKey,
             runMockApp $ do
-              now <- Unsafe.fromJust . rightToMaybe <$> Time.currentTime
-              let token = Token.token 0 now
-              hToken <- Has.grab @(R.Handler (Maybe Token.Token))
-              liftIO $ hToken (Just token)
-              x <- Token.validate
-              currentTokenKey <- R.currentValue (x ?? Time.time (Time.addUTCTime (Time.secondsToNominalDiffTime 1000) (Time.unTime now)))
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              validate <- Token.validate
+              getTime <- Token.getTime
+              time <- fmap (\t -> Time.time (Time.addUTCTime (Time.secondsToNominalDiffTime 1000) (Time.unTime t))) <$> R.currentValue (getTime ?? 0)
+              currentTokenKey <- R.currentValue ((=<<) <$> validate <*> pure time)
               let value = Nothing
               liftIO $ value @=? currentTokenKey
           ]
