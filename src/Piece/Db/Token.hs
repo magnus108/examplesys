@@ -6,6 +6,7 @@ module Piece.Db.Token
     getRoleIds,
     getRoles,
     getPrivilege,
+    getPrivilegeIds,
     lessThanTTL,
     createNow,
     validate,
@@ -15,14 +16,17 @@ where
 import Data.Profunctor
 import qualified Data.Time as Time
 import Data.Tuple.Extra
+import Piece.App.Env (TokenEnv (bSelectionToken))
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
+import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import qualified Piece.Db.Db as DB
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Privilege as Privilege
 import qualified Piece.Db.Role as Role
 import qualified Piece.Db.User as User
 import qualified Piece.Effects.Time as Time
@@ -66,10 +70,16 @@ getRoles = do
   bLookupRole <- Role.lookup
   return $ (<=<) . mapM <$> bLookupRole <*> bGetRoles
 
-getPrivilege :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe [Db.DatabaseKey]))
-getPrivilege = do
+getPrivilegeIds :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe [Db.DatabaseKey]))
+getPrivilegeIds = do
   bGetRoles <- getRoles
   return $ (fmap (>>= Role.privilege) .) <$> bGetRoles
+
+getPrivilege :: (Env.WithPrivilegeEnv env m, Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe [Privilege.Privilege]))
+getPrivilege = do
+  bGetPrivilege <- getPrivilegeIds
+  bLookupPrivilege <- Privilege.lookup
+  return $ (<=<) . mapM <$> bLookupPrivilege <*> bGetPrivilege
 
 lessThanTTL :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.NominalDiffTime -> Bool))
 lessThanTTL = do

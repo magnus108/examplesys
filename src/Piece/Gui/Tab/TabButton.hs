@@ -14,6 +14,7 @@ import qualified Piece.App.Env as Env
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Tab as Tab
 import qualified Piece.Gui.Tab.Behavior as Behavior
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
@@ -34,7 +35,7 @@ setup env = mdo
   tabEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.TabEnv
 
   bDisplay <- liftIO $ Monad.runApp env Behavior.displayTab
-  bListBoxTabs <- liftIO $ Monad.runApp env Behavior.listBox
+  bListBoxTabs <- liftIO $ Monad.runApp env Tab.listBox
   let bSelection = Env.bSelectionTab tabEnv
 
   _listBox <- listBox UI.# UI.sink items ((,,) <$> bListBoxTabs <*> bSelection <*> bDisplay)

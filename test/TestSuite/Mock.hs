@@ -56,6 +56,7 @@ data MockEnv = MockEnv
   deriving (CakeSlayer.Has UserEnv.UserEnv) via CakeSlayer.Field "userEnv" MockEnv
   deriving (CakeSlayer.Has Env.RoleEnv) via CakeSlayer.Field "roleEnv" MockEnv
   deriving (CakeSlayer.Has Env.TabEnv) via CakeSlayer.Field "tabEnv" MockEnv
+  deriving (CakeSlayer.Has Env.PrivilegeEnv) via CakeSlayer.Field "privilegeEnv" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Maybe User.User))) via CakeSlayer.Field "hUser" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Role.Role))) via CakeSlayer.Field "hRole" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Privilege.Privilege))) via CakeSlayer.Field "hPrivilege" MockEnv
@@ -115,7 +116,8 @@ mockEnv = mdo
         hPrivilege = hPrivilege,
         hUser = hUser,
         hUserLogin = hUserLogin,
-        hTime = hTime
+        hTime = hTime,
+        hTab = hTab
       }
 
 type MockApp = CakeSlayer.App Void MockEnv

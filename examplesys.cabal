@@ -124,6 +124,7 @@ test-suite examplesys-test
         Piece.Core.Item.Tests
         Piece.Db.Loan.Tests
         Piece.Db.Token.Tests
+        Piece.Db.Tab.Tests
         Piece.Db.Db.Tests
         Piece.Effects.Write.Tests
         Piece.Effects.Read.Tests
