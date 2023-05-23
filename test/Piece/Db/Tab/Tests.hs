@@ -6,22 +6,17 @@ module Piece.Db.Tab.Tests
 where
 
 import Data.Text (pack)
-import qualified Data.Time as Time
-import Piece.App.Env (PrivilegeEnv (PrivilegeEnv))
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
-import qualified Piece.Core.Time as Time
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Tab as Tab
 import qualified Piece.Db.User as User
-import qualified Piece.Effects.Time as Time
 import qualified Reactive.Threepenny as R
-import qualified Relude.Unsafe as Unsafe
 import Test.Tasty
 import Test.Tasty.HUnit
 import TestSuite.Mock

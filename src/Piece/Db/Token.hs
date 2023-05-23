@@ -16,7 +16,6 @@ where
 import Data.Profunctor
 import qualified Data.Time as Time
 import Data.Tuple.Extra
-import Piece.App.Env (TokenEnv (bSelectionToken))
 import qualified Piece.App.Env as Env
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Privilege as Privilege
@@ -90,7 +89,7 @@ lessThanTTL = do
 diffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Time.Time -> Bool))
 diffTime = do
   bLessThanTTL <- lessThanTTL
-  return $ (curry . lmap (uncurry Time.diffTime)) <$> bLessThanTTL
+  return $ curry . lmap (uncurry Time.diffTime) <$> bLessThanTTL
 
 tokenDiffTime :: (MonadIO m, Env.WithTokenEnv env m) => m (R.Behavior (Time.Time -> Db.DatabaseKey -> Maybe Db.DatabaseKey))
 tokenDiffTime = do
