@@ -78,7 +78,8 @@ tests =
               liftIO $ hPrivilege (Privilege.privilege "test2")
 
               hRole <- Has.grab @(R.Handler Role.Role)
-              liftIO $ hRole (Role.role "test" [0, 1])
+              liftIO $ hRole (Role.role "test1" [])
+              liftIO $ hRole (Role.role "test2" [0, 1])
 
               x <- Tab.listBox
               currentTabs <- R.currentValue x
@@ -94,10 +95,12 @@ tests =
               hPrivilege <- Has.grab @(R.Handler Privilege.Privilege)
               liftIO $ hPrivilege (Privilege.privilege "test1")
               liftIO $ hPrivilege (Privilege.privilege "test2")
+              liftIO $ hPrivilege (Privilege.privilege "test3")
 
               hRole <- Has.grab @(R.Handler Role.Role)
               liftIO $ hRole (Role.role "test" [0, 1])
-              liftIO $ hRole (Role.role "test" [0, 1])
+              liftIO $ hRole (Role.role "test1" [0, 1])
+              liftIO $ hRole (Role.role "test2" [0, 1])
 
               hTab <- Has.grab @(R.Handler Tab.Tab)
               liftIO $ hTab (Tab.tab "test" [0, 1])
