@@ -58,16 +58,19 @@ getUser = do
   bLookupUser <- User.lookup
   return $ (<=<) <$> bLookupUser <*> bUserId
 
-getRoleIds :: (Env.WithTokenEnv env m, Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe [Db.DatabaseKey]))
+getRoleIds :: (Env.WithTokenEnv env m, Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> [Db.DatabaseKey]))
 getRoleIds = do
   bGetUser <- getUser
-  return $ (fmap User.roles .) <$> bGetUser
+  return $ (maybe [0] User.roles .) <$> bGetUser
 
 getRoles :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe [Role.Role]))
 getRoles = do
   bGetRoles <- getRoleIds
   bLookupRole <- Role.lookup
-  return $ (<=<) . mapM <$> bLookupRole <*> bGetRoles
+  return $
+    (\f g -> lmap g (mapM f))
+      <$> bLookupRole
+      <*> bGetRoles
 
 getPrivilegeIds :: (Env.WithTokenEnv env m, Env.WithUserEnv env m, Env.WithRoleEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe [Db.DatabaseKey]))
 getPrivilegeIds = do

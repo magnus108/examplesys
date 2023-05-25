@@ -51,7 +51,7 @@ contains :: (Env.WithUserEnv env m, Env.WithPrivilegeEnv env m, Env.WithRoleEnv 
 contains = do
   bGetPrivilegeTab <- getPrivilege
   bGetPrivilegeToken <- Token.getPrivilege
-  return $ (\f g -> curry $ lmap (firstM f <=< secondM g) $ maybe False $ uncurry Privilege.contains) <$> bGetPrivilegeToken <*> bGetPrivilegeTab
+  return $ (\f g -> curry $ lmap (firstM f <=< secondM g) $ maybe False (uncurry Privilege.contains)) <$> bGetPrivilegeToken <*> bGetPrivilegeTab
 
 listBox :: (Env.WithPrivilegeEnv env m, Env.WithUserEnv env m, Env.WithTokenEnv env m, Env.WithRoleEnv env m, Env.WithTabEnv env m) => m (R.Behavior [Db.DatabaseKey])
 listBox = do
@@ -61,10 +61,7 @@ listBox = do
   let bSelectionToken = Env.bSelectionToken tokenEnv
   bContains <- contains
   return $
-    ( \p t db -> case t of
-        Nothing -> []
-        Just t' -> filter (p t') (Db.keys db)
-    )
+    (\p t db -> filter (maybe (const True) p t) (Db.keys db))
       <$> bContains
       <*> bSelectionToken
       <*> bDatabaseTab

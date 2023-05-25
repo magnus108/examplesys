@@ -30,7 +30,7 @@ create form = do
   let formName = UserCreateForm.name form
       formPassword = UserCreateForm.password form
       formAdmin = UserCreateForm.admin form
-      roles = if formAdmin then [0, 1] else [0]
+      roles = if formAdmin then [0, 1, 2] else [0, 1]
   password <- Password.mkPasswordHash formPassword
   return $ case password of
     Nothing -> Nothing
