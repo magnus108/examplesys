@@ -72,6 +72,7 @@ common common-all
         Piece.Gui.Loan.Behavior
         Piece.Gui.User.Create
         Piece.Gui.User.Behavior
+        Piece.Gui.User.List
 
     mixins:
         base hiding (Prelude)

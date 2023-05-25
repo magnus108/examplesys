@@ -1,6 +1,6 @@
 {-# LANGUAGE RecursiveDo #-}
 
-module Piece.Gui.User.Login
+module Piece.Gui.User.List
   ( setup,
     tUserLogin,
     tUserLoginForm,

@@ -38,6 +38,7 @@ import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.TabButton as TabButton
 import qualified Piece.Gui.Tab.TabView as TabView
 import qualified Piece.Gui.User.Create as UserCreate
+import qualified Piece.Gui.User.List as UserList
 import qualified Piece.Gui.User.Login as UserLogin
 import qualified Piece.Time.Time as Time
 import qualified Reactive.Threepenny as R
@@ -59,8 +60,9 @@ main port = do
       loanCreate <- LoanCreate.setup env
       userCreate <- UserCreate.setup env
       userLogin <- UserLogin.setup env
+      userList <- UserList.setup env
 
-      let tabViews = [UI.getElement loanCreate, UI.getElement userCreate, UI.getElement userLogin]
+      let tabViews = [UI.getElement loanCreate, UI.getElement userCreate, UI.getElement userLogin, UI.getElement userList]
       tabs <- TabButton.setup env
       views <- TabView.setup env tabViews
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element views]
