@@ -96,8 +96,11 @@ main port = do
         let tUserSelection = UserList.tUserSelection userList
             eUserSelect = R.rumors tUserSelection
 
+        let tUserDelete = UserList.tUserDelete userList
+            eUserDelete = R.rumors tUserDelete
+
         timeEnv <- timeEnvSetup config eTime
-        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter
+        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete
         tokenEnv <- tokenEnvSetup config eUserLogin eTime
         loanEnv <- loanEnvSetup config loanCreate
         roleEnv <- roleEnvSetup config R.never
@@ -186,10 +189,17 @@ userLoginFormSetup :: MonadIO m => R.Event UserLoginForm.User -> R.Event (Maybe 
 userLoginFormSetup eUserLoginForm eUserLogin = do
   R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
 
-databaseUserSetup :: (Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database User.User)) => Config.Config -> R.Event User.User -> m (R.Behavior (Db.Database User.User))
-databaseUserSetup config eUserCreate = mdo
+databaseUserSetup :: (Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database User.User)) => Config.Config -> R.Event User.User -> R.Event (Maybe Db.DatabaseKey) -> m (R.Behavior (Db.Database User.User))
+databaseUserSetup config eUserCreate eUserDelete = mdo
   databaseUser <- Read.read (Config.datastoreUser config)
-  bDatabaseUser <- R.stepper (fromRight Db.empty databaseUser) $ Unsafe.head <$> R.unions [flip Db.create <$> bDatabaseUser UI.<@> eUserCreate]
+  bDatabaseUser <-
+    R.stepper (fromRight Db.empty databaseUser) $
+      Unsafe.head
+        <$> R.unions
+          [ flip Db.create <$> bDatabaseUser UI.<@> eUserCreate,
+            flip Db.delete <$> bDatabaseUser UI.<@> (R.filterJust eUserDelete)
+          ]
+
   return bDatabaseUser
 
 databaseTokenSetup ::
@@ -266,16 +276,19 @@ userEnvSetup ::
   R.Event Time.Time ->
   R.Event (Maybe Db.DatabaseKey) ->
   R.Event String ->
+  R.Event (Maybe Db.DatabaseKey) ->
   m UserEnv.UserEnv
-userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser = do
+userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser eUserDelete = do
   bUserCreateForm <- userCreateFormSetup eUserCreateForm eUserCreate
   bUserCreate <- userCreateSetup eUserCreate
   bUserLoginForm <- userLoginFormSetup eUserLoginForm eUserLogin
   bUserLogin <- userLoginSetup eUserLogin
-  bDatabaseUser <- databaseUserSetup config (R.filterJust eUserCreate)
+  bDatabaseUser <- databaseUserSetup config (R.filterJust eUserCreate) eUserDelete
 
-  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectUser]
+  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectUser, Nothing <$ eUserDelete]
   bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUser]
+
+  bUserDelete <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserDelete]
 
   return $
     UserEnv.UserEnv
@@ -285,7 +298,8 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
         bUserLoginForm = bUserLoginForm,
         bUserLogin = bUserLogin,
         bSelectionUser = bSelectionUser,
-        bFilterUser = bFilterUser
+        bFilterUser = bFilterUser,
+        bUserDelete = bUserDelete
       }
 
 loanEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Loan.Loan)) => Config.Config -> LoanCreate.Create -> m Env.LoanEnv

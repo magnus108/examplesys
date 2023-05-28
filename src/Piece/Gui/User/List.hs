@@ -4,6 +4,7 @@ module Piece.Gui.User.List
   ( setup,
     tUserFilter,
     tUserSelection,
+    tUserDelete,
     Create,
     mkSearch,
     mkInput,
@@ -13,23 +14,28 @@ module Piece.Gui.User.List
   )
 where
 
+import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
+import qualified Graphics.UI.Threepenny.Events as UI
 import qualified Graphics.UI.Threepenny.Widgets as UI
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Monad as Monad
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
+import qualified Piece.Core.User as User
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Gui.Checkbox.Checkbox as Checkbox
 import qualified Piece.Gui.User.Behavior as Behavior
 import qualified Reactive.Threepenny as R
+import qualified Relude.Unsafe as Unsafe
 
 data Create = Create
   { view :: UI.Element,
     tUserSelection :: R.Tidings (Maybe Db.DatabaseKey),
-    tUserFilter :: R.Tidings String
+    tUserFilter :: R.Tidings String,
+    tUserDelete :: R.Tidings (Maybe Db.DatabaseKey)
   }
 
 instance UI.Widget Create where
@@ -39,15 +45,24 @@ setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
   (searchEntry, filterUser, listBoxUser) <- mkSearchEntry bOtherUsers (UserEnv.bSelectionUser userEnv) bDisplayUser (UserEnv.bFilterUser userEnv)
 
-  view <- mkContainer [UI.element searchEntry]
+  (deleteBtn, deleteBtnView) <- mkButton "Slet"
+
+  _ <- UI.element deleteBtn UI.# UI.sink UI.enabled (isJust <$> UserEnv.bSelectionUser userEnv)
+
+  view <- mkContainer [UI.element searchEntry, UI.element deleteBtnView]
 
   let tUserSelection = UI.userSelection listBoxUser
+      bUserSelection = UI.facts tUserSelection
+
   let tUserFilter = UI.userText filterUser
+      eDelete = UI.click deleteBtn
 
   userEnv <- liftIO $ Monad.runApp env $ Has.grab @UserEnv.UserEnv
 
-  bDisplayUser <- liftIO $ Monad.runApp env $ Behavior.displayUser
-  bOtherUsers <- liftIO $ Monad.runApp env $ Token.bOtherUsers
+  bDisplayUser <- liftIO $ Monad.runApp env Behavior.displayUser
+  bOtherUsers <- liftIO $ Monad.runApp env Token.bOtherUsers
+
+  let tUserDelete = UI.tidings (UserEnv.bUserDelete userEnv) (bUserSelection UI.<@ eDelete)
 
   return Create {..}
 
