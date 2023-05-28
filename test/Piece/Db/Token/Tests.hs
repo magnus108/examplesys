@@ -14,6 +14,7 @@ import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
+import Piece.Db.Token (bOtherUsers)
 import qualified Piece.Db.Token as Token
 import qualified Piece.Db.User as User
 import qualified Piece.Effects.Time as Time
@@ -230,6 +231,40 @@ tests =
               time <- fmap (Time.time . Time.addUTCTime (Time.secondsToNominalDiffTime 1000) . Time.unTime) <$> R.currentValue (getTime ?? 0)
               currentTokenKey <- R.currentValue ((=<<) <$> validate <*> pure time)
               let value = Nothing
+              liftIO $ value @=? currentTokenKey
+          ],
+        fromAssertions
+          "isTokenUser"
+          [ runMockApp $ do
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              isTokenUser <- Token.isTokenUser
+              currentTokenKey <- R.currentValue (isTokenUser ?? 0)
+              let value = True
+              liftIO $ value @=? currentTokenKey,
+            runMockApp $ do
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 1)
+              isTokenUser <- Token.isTokenUser
+              currentTokenKey <- R.currentValue (isTokenUser ?? 0)
+              let value = False
+              liftIO $ value @=? currentTokenKey
+          ],
+        fromAssertions
+          "bOtherUsers"
+          [ runMockApp $ do
+              hUser <- Has.grab @(R.Handler (Maybe User.User))
+              user <- User.create $ UserCreateForm.user "user1" (Password.PasswordPlainText (pack "pass1")) False
+              liftIO $ hUser user
+              user <- User.create $ UserCreateForm.user "user2" (Password.PasswordPlainText (pack "pass2")) False
+              liftIO $ hUser user
+              user <- User.create $ UserCreateForm.user "user3" (Password.PasswordPlainText (pack "pass3")) False
+              liftIO $ hUser user
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              bOtherUsers <- Token.bOtherUsers
+              currentTokenKey <- R.currentValue bOtherUsers
+              let value = [1, 2]
               liftIO $ value @=? currentTokenKey
           ]
       ]

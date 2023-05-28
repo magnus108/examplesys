@@ -1,6 +1,8 @@
 module Piece.Db.Token
   ( lookup,
     getTime,
+    isTokenUser,
+    bOtherUsers,
     getUserId,
     getUser,
     getRoleIds,
@@ -109,3 +111,16 @@ validate = do
     (\diffTime mtoken now -> mtoken >>= \token -> diffTime now token)
       <$> bTokenDiffTime
       <*> bSelectionToken
+
+isTokenUser :: (Env.WithTokenEnv env m) => m (R.Behavior (Db.DatabaseKey -> Bool))
+isTokenUser = do
+  tokenEnv <- Has.grab @Env.TokenEnv
+  bUserId <- getUserId
+  let bSelectionToken = Env.bSelectionToken tokenEnv
+  return $ (\f i -> maybe (const False) (==) (f =<< i)) <$> bUserId <*> bSelectionToken
+
+bOtherUsers :: (Env.WithTokenEnv env m, Env.WithUserEnv env m) => m (R.Behavior [Db.DatabaseKey])
+bOtherUsers = do
+  bUsers <- User.bListBox
+  bIsTokenUser <- isTokenUser
+  return $ (\p -> filter (not . p)) <$> bIsTokenUser <*> bUsers

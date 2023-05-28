@@ -89,8 +89,14 @@ main port = do
         let tSelectionTab = TabButton.userSelection tabs
             eSelectionTab = UI.rumors tSelectionTab
 
+        let tUserFilter = UserList.tUserFilter userList
+            eUserFilter = R.rumors tUserFilter
+
+        let tUserSelection = UserList.tUserSelection userList
+            eUserSelect = R.rumors tUserSelection
+
         timeEnv <- timeEnvSetup config eTime
-        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime
+        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter
         tokenEnv <- tokenEnvSetup config eUserLogin eTime
         loanEnv <- loanEnvSetup config loanCreate
         roleEnv <- roleEnvSetup config R.never
@@ -257,20 +263,28 @@ userEnvSetup ::
   R.Event UserLoginForm.User ->
   R.Event (Maybe Db.DatabaseKey) ->
   R.Event Time.Time ->
+  R.Event (Maybe Db.DatabaseKey) ->
+  R.Event String ->
   m UserEnv.UserEnv
-userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime = do
+userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser = do
   bUserCreateForm <- userCreateFormSetup eUserCreateForm eUserCreate
   bUserCreate <- userCreateSetup eUserCreate
   bUserLoginForm <- userLoginFormSetup eUserLoginForm eUserLogin
   bUserLogin <- userLoginSetup eUserLogin
   bDatabaseUser <- databaseUserSetup config (R.filterJust eUserCreate)
+
+  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectUser]
+  bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUser]
+
   return $
     UserEnv.UserEnv
       { bDatabaseUser = bDatabaseUser,
         bUserCreate = bUserCreate,
         bUserCreateForm = bUserCreateForm,
         bUserLoginForm = bUserLoginForm,
-        bUserLogin = bUserLogin
+        bUserLogin = bUserLogin,
+        bSelectionUser = bSelectionUser,
+        bFilterUser = bFilterUser
       }
 
 loanEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Loan.Loan)) => Config.Config -> LoanCreate.Create -> m Env.LoanEnv

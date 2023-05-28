@@ -1,6 +1,5 @@
 module Piece.Gui.User.Behavior
-  ( showUser,
-    displayUser,
+  ( displayUser,
     bFindUser,
   )
 where
@@ -16,16 +15,6 @@ import qualified Piece.Db.Db as Db
 import qualified Piece.Db.User as User
 import qualified Reactive.Threepenny as R
 
-showUser :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> String))
-showUser = do
-  bLookup <- User.lookup
-  return $ (maybe "" User.name .) <$> bLookup
-
-displayUser :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
-displayUser = do
-  bShow <- showUser
-  return $ (UI.string .) <$> bShow
-
 bFindUser :: (Env.WithUserEnv env m) => m (R.Behavior (UserLoginForm.User -> Maybe Db.DatabaseKey))
 bFindUser = do
   userEnv <- Has.grab @UserEnv.UserEnv
@@ -39,3 +28,8 @@ bFindUser = do
 validateLogin :: UserLoginForm.User -> User.User -> Bool
 validateLogin form user =
   (User.name user == UserLoginForm.name form) && Password.verifyPassword (UserLoginForm.password form) (User.password user)
+
+displayUser :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> UI.UI UI.Element))
+displayUser = do
+  bShow <- User.showUser
+  return $ (UI.string .) <$> bShow

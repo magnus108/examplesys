@@ -18,10 +18,7 @@ module Piece.App.Env
   )
 where
 
-import qualified Data.Map as Map
 import qualified Data.Time.Clock as Time
-import qualified Data.Time.LocalTime as Time
-import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.UserEnv as UserEnv
 import Piece.CakeSlayer.Has (Field (..), Has)
 import Piece.Core.Loan (Loan)
@@ -30,7 +27,6 @@ import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
 import qualified Piece.Core.Time as Time
 import qualified Piece.Core.Token as Token
-import qualified Piece.Core.User as User
 import Piece.Db.Db (Database, DatabaseKey)
 import qualified Reactive.Threepenny as R
 
