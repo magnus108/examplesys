@@ -43,13 +43,13 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  (searchEntry, filterUser, listBoxUser) <- mkSearchEntry bOtherUsers (UserEnv.bSelectionUser userEnv) bDisplayUser (UserEnv.bFilterUser userEnv)
+  ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers (UserEnv.bSelectionUser userEnv) bDisplayUser (UserEnv.bFilterUser userEnv)
 
   (deleteBtn, deleteBtnView) <- mkButton "Slet"
 
   _ <- UI.element deleteBtn UI.# UI.sink UI.enabled (isJust <$> UserEnv.bSelectionUser userEnv)
 
-  view <- mkContainer [UI.element searchEntry, UI.element deleteBtnView]
+  view <- mkContainer [mkBox UI.#+ [UI.element filterUserView, UI.element listBoxUserView, UI.element deleteBtnView]]
 
   let tUserSelection = UI.userSelection listBoxUser
       bUserSelection = UI.facts tUserSelection
@@ -103,13 +103,15 @@ mkSearchEntry ::
   UI.Behavior (Maybe a) ->
   UI.Behavior (a -> UI.UI UI.Element) ->
   UI.Behavior String ->
-  UI.UI (UI.Element, UI.TextEntry, UI.ListBox a)
+  UI.UI ((UI.TextEntry, UI.Element), (UI.ListBox a, UI.Element))
 mkSearchEntry bItems bSel bDisplay bFilterItem = do
-  (filter, filterView) <- mkSearch bFilterItem
-  (listBox, listBoxView) <- mkListBox bItems bSel bDisplay
+  filter <- mkSearch bFilterItem
+  listBox <- mkListBox bItems bSel bDisplay
   --    counterView                 <- mkCounter bItems
-  view <- UI.div UI.#. "box" UI.#+ [UI.element filterView, UI.element listBoxView] -- , UI.element counterView]
-  return (view, filter, listBox)
+  return (filter, listBox)
+
+mkBox :: UI.UI UI.Element
+mkBox = UI.div UI.#. "box"
 
 mkContainer :: [UI.UI UI.Element] -> UI.UI UI.Element
 mkContainer elems =
