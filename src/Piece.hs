@@ -77,6 +77,7 @@ main port = do
 
         let tUserCreate = UserCreate.tUserCreate userCreate
             eUserCreate = UI.rumors tUserCreate
+
         let tUserCreateForm = UserCreate.tUserCreateForm userCreate
             eUserCreateForm = UI.rumors tUserCreateForm
 

@@ -5,6 +5,11 @@ module Piece.Gui.User.List
     tUserFilter,
     tUserSelection,
     Create,
+    mkSearch,
+    mkInput,
+    mkContainer,
+    mkCheckbox,
+    mkButton,
   )
 where
 
@@ -17,6 +22,7 @@ import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
+import qualified Piece.Gui.Checkbox.Checkbox as Checkbox
 import qualified Piece.Gui.User.Behavior as Behavior
 import qualified Reactive.Threepenny as R
 
@@ -61,13 +67,16 @@ mkListBox bItems bSel bDisplay = do
 
   return (listBox, view)
 
-mkInput :: UI.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
-mkInput bFilterItem = do
+mkSearch :: R.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
+mkSearch = mkInput "Søg"
+
+mkInput :: String -> UI.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
+mkInput label bFilterItem = do
   filterItem <- UI.entry bFilterItem
   view <-
     UI.div
       UI.#. "field"
-      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string "Søg"],
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
               UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input"]
             ]
   return (filterItem, view)
@@ -81,7 +90,7 @@ mkSearchEntry ::
   UI.Behavior String ->
   UI.UI (UI.Element, UI.TextEntry, UI.ListBox a)
 mkSearchEntry bItems bSel bDisplay bFilterItem = do
-  (filter, filterView) <- mkInput bFilterItem
+  (filter, filterView) <- mkSearch bFilterItem
   (listBox, listBoxView) <- mkListBox bItems bSel bDisplay
   --    counterView                 <- mkCounter bItems
   view <- UI.div UI.#. "box" UI.#+ [UI.element filterView, UI.element listBoxView] -- , UI.element counterView]
@@ -90,3 +99,23 @@ mkSearchEntry bItems bSel bDisplay bFilterItem = do
 mkContainer :: [UI.UI UI.Element] -> UI.UI UI.Element
 mkContainer elems =
   UI.div UI.#. "section is-medium" UI.#+ [UI.div UI.#. "container" UI.#+ elems]
+
+mkButton :: String -> UI.UI (UI.Element, UI.Element)
+mkButton title = do
+  button <- UI.button UI.#+ [UI.string title]
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [UI.div UI.#. "control" UI.#+ [UI.element button UI.#. "button"]]
+  return (button, view)
+
+mkCheckbox :: String -> R.Behavior Bool -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
+mkCheckbox label bCheck = do
+  elem <- Checkbox.entry bCheck
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox"]
+            ]
+  return (elem, view)
