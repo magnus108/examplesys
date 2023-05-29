@@ -266,5 +266,47 @@ tests =
               currentTokenKey <- R.currentValue bOtherUsers
               let value = [1, 2]
               liftIO $ value @=? currentTokenKey
+          ],
+        fromAssertions
+          "availableSelection"
+          [ runMockApp $ do
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              bAvailable <- Token.availableSelection
+              available <- R.currentValue bAvailable
+              let value = False
+              liftIO $ value @=? available,
+            runMockApp $ do
+              hUser <- Has.grab @(R.Handler (Maybe User.User))
+              user <- User.create $ UserCreateForm.user "user1" (Password.PasswordPlainText (pack "pass1")) False
+              liftIO $ hUser user
+              user <- User.create $ UserCreateForm.user "user2" (Password.PasswordPlainText (pack "pass2")) False
+              liftIO $ hUser user
+              user <- User.create $ UserCreateForm.user "user3" (Password.PasswordPlainText (pack "pass3")) False
+              liftIO $ hUser user
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              hUserSelection <- Has.grab @(R.Handler UserSelection)
+              liftIO $ hUserSelection (UserSelection (Just 1))
+              bAvailable <- Token.availableSelection
+              available <- R.currentValue bAvailable
+              let value = True
+              liftIO $ value @=? available,
+            runMockApp $ do
+              hUser <- Has.grab @(R.Handler (Maybe User.User))
+              user <- User.create $ UserCreateForm.user "user1" (Password.PasswordPlainText (pack "pass1")) False
+              liftIO $ hUser user
+              user <- User.create $ UserCreateForm.user "user2" (Password.PasswordPlainText (pack "pass2")) False
+              liftIO $ hUser user
+              user <- User.create $ UserCreateForm.user "user3" (Password.PasswordPlainText (pack "pass3")) False
+              liftIO $ hUser user
+              hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
+              liftIO $ hUserLogin (Just 0)
+              hUserSelection <- Has.grab @(R.Handler UserSelection)
+              liftIO $ hUserSelection (UserSelection (Just 0))
+              bAvailable <- Token.availableSelection
+              available <- R.currentValue bAvailable
+              let value = False
+              liftIO $ value @=? available
           ]
       ]

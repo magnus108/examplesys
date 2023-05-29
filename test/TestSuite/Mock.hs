@@ -7,6 +7,7 @@ module TestSuite.Mock
     MockApp,
     mockConfig,
     mockEnv,
+    UserSelection (..),
   )
 where
 
@@ -44,6 +45,7 @@ data MockEnv = MockEnv
     tabEnv :: Env.TabEnv,
     userEnv :: UserEnv.UserEnv,
     hUser :: R.Handler (Maybe User.User), -- should reflect app events
+    hUserSelection :: R.Handler UserSelection, -- should reflect app events
     hRole :: R.Handler (Role.Role), -- should reflect app events this will never
     hPrivilege :: R.Handler (Privilege.Privilege), -- should reflect app events this will never
     hTime :: R.Handler Time.Time, -- should reflect app events this will never
@@ -58,11 +60,14 @@ data MockEnv = MockEnv
   deriving (CakeSlayer.Has Env.TabEnv) via CakeSlayer.Field "tabEnv" MockEnv
   deriving (CakeSlayer.Has Env.PrivilegeEnv) via CakeSlayer.Field "privilegeEnv" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Maybe User.User))) via CakeSlayer.Field "hUser" MockEnv
+  deriving (CakeSlayer.Has (R.Handler UserSelection)) via CakeSlayer.Field "hUserSelection" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Role.Role))) via CakeSlayer.Field "hRole" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Privilege.Privilege))) via CakeSlayer.Field "hPrivilege" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Time.Time))) via CakeSlayer.Field "hTime" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Tab.Tab))) via CakeSlayer.Field "hTab" MockEnv
   deriving (CakeSlayer.Has (R.Handler (Maybe Db.DatabaseKey))) via CakeSlayer.Field "hUserLogin" MockEnv
+
+newtype UserSelection = UserSelection {unUserSelection :: Maybe Db.DatabaseKey}
 
 mockEnv :: MockApp MockEnv
 mockEnv = mdo
@@ -76,7 +81,8 @@ mockEnv = mdo
 
   -- User
   (eUser, hUser) <- liftIO $ R.newEvent
-  userEnv <- userEnvSetup config R.never eUser R.never eUserLogin R.never R.never R.never
+  (eUserSelection, hUserSelection) <- liftIO $ R.newEvent
+  userEnv <- userEnvSetup config R.never eUser R.never eUserLogin R.never (unUserSelection <$> eUserSelection) R.never R.never
 
   -- Role
   (eRole, hRole) <- liftIO $ R.newEvent
@@ -115,6 +121,7 @@ mockEnv = mdo
         hRole = hRole,
         hPrivilege = hPrivilege,
         hUser = hUser,
+        hUserSelection = hUserSelection,
         hUserLogin = hUserLogin,
         hTime = hTime,
         hTab = hTab

@@ -12,6 +12,7 @@ import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserLoginForm as UserLoginForm
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Token as Token
 import qualified Piece.Db.User as User
 import qualified Reactive.Threepenny as R
 

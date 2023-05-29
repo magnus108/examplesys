@@ -47,9 +47,16 @@ setup env = mdo
 
   (deleteBtn, deleteBtnView) <- mkButton "Slet"
 
-  _ <- UI.element deleteBtn UI.# UI.sink UI.enabled (isJust <$> UserEnv.bSelectionUser userEnv)
+  _ <- UI.element deleteBtn UI.# UI.sink UI.enabled bAvailable
 
-  view <- mkContainer [mkBox UI.#+ [UI.element filterUserView, UI.element listBoxUserView, UI.element deleteBtnView]]
+  view <-
+    mkContainer
+      [ mkBox
+          UI.#+ [ UI.element filterUserView,
+                  UI.element listBoxUserView,
+                  UI.element deleteBtnView
+                ]
+      ]
 
   let tUserSelection = UI.userSelection listBoxUser
       bUserSelection = UI.facts tUserSelection
@@ -60,6 +67,7 @@ setup env = mdo
   userEnv <- liftIO $ Monad.runApp env $ Has.grab @UserEnv.UserEnv
 
   bDisplayUser <- liftIO $ Monad.runApp env Behavior.displayUser
+  bAvailable <- liftIO $ Monad.runApp env Token.availableSelection
   bOtherUsers <- liftIO $ Monad.runApp env Token.bOtherUsers
 
   let tUserDelete = UI.tidings (UserEnv.bUserDelete userEnv) (bUserSelection UI.<@ eDelete)

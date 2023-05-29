@@ -12,6 +12,7 @@ module Piece.Db.Token
     lessThanTTL,
     createNow,
     validate,
+    availableSelection,
   )
 where
 
@@ -19,6 +20,7 @@ import Data.Profunctor
 import qualified Data.Time as Time
 import Data.Tuple.Extra
 import qualified Piece.App.Env as Env
+import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -124,3 +126,9 @@ bOtherUsers = do
   bUsers <- User.bListBox
   bIsTokenUser <- isTokenUser
   return $ (\p -> filter (not . p)) <$> bIsTokenUser <*> bUsers
+
+availableSelection :: (Env.WithUserEnv env m, Env.WithTokenEnv env m) => m (R.Behavior Bool)
+availableSelection = do
+  userEnv <- Has.grab @UserEnv.UserEnv
+  otherUsers <- bOtherUsers
+  return $ maybe False . flip elem <$> otherUsers <*> UserEnv.bSelectionUser userEnv
