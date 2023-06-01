@@ -1,4 +1,4 @@
-module Piece.Core.UserCreateForm
+module Piece.Core.UserEditForm
   ( User,
     name,
     user,

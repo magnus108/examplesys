@@ -59,6 +59,7 @@ common common-all
         Piece.Core.User
         Piece.Gui.User.Login
         Piece.Core.UserCreateForm
+        Piece.Core.UserEditForm
         Piece.Core.UserLoginForm
         Piece.Core.Token
         Piece.Core.Privilege

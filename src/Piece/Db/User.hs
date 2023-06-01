@@ -2,6 +2,7 @@ module Piece.Db.User
   ( lookup,
     getRoles,
     create,
+    edit,
     bListBox,
     showUser,
   )
@@ -13,6 +14,7 @@ import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
+import qualified Piece.Core.UserEditForm as UserEditForm
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 
@@ -36,6 +38,17 @@ create form = do
   let formName = UserCreateForm.name form
       formPassword = UserCreateForm.password form
       formAdmin = UserCreateForm.admin form
+      roles = if formAdmin then [0, 1, 2] else [0, 1]
+  password <- Password.mkPasswordHash formPassword
+  return $ case password of
+    Nothing -> Nothing
+    Just p -> Just (User.user formName p roles)
+
+edit :: MonadIO m => UserEditForm.User -> m (Maybe User.User)
+edit form = do
+  let formName = UserEditForm.name form
+      formPassword = UserEditForm.password form
+      formAdmin = UserEditForm.admin form
       roles = if formAdmin then [0, 1, 2] else [0, 1]
   password <- Password.mkPasswordHash formPassword
   return $ case password of
