@@ -32,6 +32,7 @@ import qualified Piece.Core.UserEditForm as UserEditForm
 import qualified Piece.Core.UserLoginForm as UserLoginForm
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
+import qualified Piece.Db.User as User
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
@@ -321,7 +322,11 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
   bSelectionUserEdit <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectUserEdit, Nothing <$ eUserEditKeyValue]
   bFilterUserEdit <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUserEdit]
   bUserEditKeyValue <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserEditKeyValue]
-  bUserEditForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserEditForm, Nothing <$ eUserEditKeyValue]
+
+  --- WRONG
+  bUserLookup <- User.lookup
+  let eLookup = fmap User.userEdit <$> (bUserLookup UI.<@> (R.filterJust $ Unsafe.head <$> R.unions [eSelectUserEdit, Nothing <$ eUserEditKeyValue]))
+  bUserEditForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserEditForm, Nothing <$ eUserEditKeyValue, eLookup]
 
   return $
     UserEnv.UserEnv

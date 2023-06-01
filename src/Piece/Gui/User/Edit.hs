@@ -61,7 +61,7 @@ setup env = mdo
   _ <- UI.element userName UI.# UI.sink UI.enabled bEnabled
   _ <- UI.element userPassword UI.# UI.sink UI.enabled bEnabled
   _ <- UI.element userAdmin UI.# UI.sink UI.enabled bEnabled
-  _ <- UI.element editBtn UI.# UI.sink UI.enabled bEnabled
+  _ <- UI.element editBtn UI.# UI.sink UI.enabled ((&&) <$> bEnabled <*> (isJust <$> UserEnv.bUserEditForm userEnv))
 
   let tUserName = UI.userText userName
   let tUserPassword = Password.PasswordPlainText . pack <$> UI.userText userPassword
@@ -94,6 +94,7 @@ setup env = mdo
 
   let tUserSelection = UI.userSelection listBoxUser
       bUserSelection = UI.facts tUserSelection
+      eUserSelection = UI.rumors tUserSelection
 
   let tUserFilter = UI.userText filterUser
 
@@ -110,7 +111,9 @@ setup env = mdo
     val <- run $ User.edit userEditForm
     hClick2 val
 
-  bEnabled <- R.stepper True $ Unsafe.head <$> R.unions [False <$ eClick1, True <$ eClick2]
+  bEnabledLoading <- R.stepper True $ Unsafe.head <$> R.unions [False <$ eClick1, True <$ eClick2]
+
+  let bEnabled = (&&) <$> bEnabledLoading <*> (isJust <$> UserEnv.bSelectionUserEdit userEnv)
 
   let tUserEditKeyValue = UI.tidings (UserEnv.bUserEditKeyValue userEnv) (liftA2 (,) <$> bUserSelection UI.<@> eClick2)
 

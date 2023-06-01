@@ -5,6 +5,7 @@ module Piece.Db.User
     edit,
     bListBox,
     showUser,
+    userEdit,
   )
 where
 
@@ -54,6 +55,14 @@ edit form = do
   return $ case password of
     Nothing -> Nothing
     Just p -> Just (User.user formName p roles)
+
+userEdit :: User.User -> UserEditForm.User
+userEdit user =
+  let name = User.name user
+      password = Password.PasswordPlainText ""
+      roles = User.roles user
+      admin = 2 `elem` roles
+   in UserEditForm.user name password admin
 
 bListBox :: (Env.WithUserEnv env m) => m (R.Behavior [Db.DatabaseKey])
 bListBox = do
