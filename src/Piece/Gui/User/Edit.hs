@@ -1,10 +1,10 @@
 {-# LANGUAGE RecursiveDo #-}
 
-module Piece.Gui.User.List
+module Piece.Gui.User.Edit
   ( setup,
     tUserFilter,
     tUserSelection,
-    tUserDelete,
+    tUserEdit,
     Create,
     mkSearch,
     mkInput,
@@ -35,7 +35,7 @@ data Create = Create
   { view :: UI.Element,
     tUserSelection :: R.Tidings (Maybe Db.DatabaseKey),
     tUserFilter :: R.Tidings String,
-    tUserDelete :: R.Tidings (Maybe Db.DatabaseKey)
+    tUserEdit :: R.Tidings (Maybe Db.DatabaseKey)
   }
 
 instance UI.Widget Create where
@@ -43,7 +43,7 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers (UserEnv.bSelectionUser userEnv) bDisplayUser (UserEnv.bFilterUser userEnv)
+  ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers (UserEnv.bSelectionUserEdit userEnv) bDisplayUser (UserEnv.bFilterUserEdit userEnv)
 
   (deleteBtn, deleteBtnView) <- mkButton "Slet"
 
@@ -62,18 +62,18 @@ setup env = mdo
       bUserSelection = UI.facts tUserSelection
 
   let tUserFilter = UI.userText filterUser
-      eDelete = UI.click deleteBtn
+      eEdit = UI.click deleteBtn
 
   userEnv <- liftIO $ Monad.runApp env $ Has.grab @UserEnv.UserEnv
 
   bDisplayUser <- liftIO $ Monad.runApp env Behavior.displayUser
 
-  let bFilterUser = isPrefixOf <$> UserEnv.bFilterUser userEnv
-  let bSelection = UserEnv.bSelectionUser userEnv
+  let bFilterUser = isPrefixOf <$> UserEnv.bFilterUserEdit userEnv
+  let bSelection = UserEnv.bSelectionUserEdit userEnv
   bAvailable <- liftIO $ Monad.runApp env (Token.availableSelection bSelection bFilterUser)
   bOtherUsers <- liftIO $ Monad.runApp env (Token.bOtherUsersFilter bFilterUser)
 
-  let tUserDelete = UI.tidings (UserEnv.bUserDelete userEnv) (bUserSelection UI.<@ eDelete)
+  let tUserEdit = UI.tidings (UserEnv.bUserEdit userEnv) (bUserSelection UI.<@ eEdit)
 
   return Create {..}
 

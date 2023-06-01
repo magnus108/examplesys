@@ -14,5 +14,9 @@ data UserEnv = UserEnv
     bUserLogin :: R.Behavior (Maybe Db.DatabaseKey),
     bSelectionUser :: R.Behavior (Maybe Db.DatabaseKey),
     bFilterUser :: R.Behavior String,
-    bUserDelete :: R.Behavior (Maybe Db.DatabaseKey)
+    bUserDelete :: R.Behavior (Maybe Db.DatabaseKey),
+    --- Edit
+    bSelectionUserEdit :: R.Behavior (Maybe Db.DatabaseKey),
+    bFilterUserEdit :: R.Behavior String,
+    bUserEdit :: R.Behavior (Maybe Db.DatabaseKey)
   }

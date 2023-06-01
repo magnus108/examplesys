@@ -7,6 +7,7 @@ where
 
 import Data.Text (pack)
 import qualified Data.Time as Time
+import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.Time as Time
@@ -14,7 +15,6 @@ import qualified Piece.Core.Token as Token
 import qualified Piece.Core.User as User
 import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
-import Piece.Db.Token (bOtherUsers)
 import qualified Piece.Db.Token as Token
 import qualified Piece.Db.User as User
 import qualified Piece.Effects.Time as Time
@@ -272,7 +272,10 @@ tests =
           [ runMockApp $ do
               hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
               liftIO $ hUserLogin (Just 0)
-              bAvailable <- Token.availableSelection
+              userEnv <- Has.grab @UserEnv.UserEnv
+              let bFilterUser = isPrefixOf <$> UserEnv.bFilterUser userEnv
+              let bSelection = UserEnv.bSelectionUser userEnv
+              bAvailable <- Token.availableSelection bSelection bFilterUser
               available <- R.currentValue bAvailable
               let value = False
               liftIO $ value @=? available,
@@ -288,7 +291,10 @@ tests =
               liftIO $ hUserLogin (Just 0)
               hUserSelection <- Has.grab @(R.Handler UserSelection)
               liftIO $ hUserSelection (UserSelection (Just 1))
-              bAvailable <- Token.availableSelection
+              userEnv <- Has.grab @UserEnv.UserEnv
+              let bFilterUser = isPrefixOf <$> UserEnv.bFilterUser userEnv
+              let bSelection = UserEnv.bSelectionUser userEnv
+              bAvailable <- Token.availableSelection bSelection bFilterUser
               available <- R.currentValue bAvailable
               let value = True
               liftIO $ value @=? available,
@@ -304,7 +310,10 @@ tests =
               liftIO $ hUserLogin (Just 0)
               hUserSelection <- Has.grab @(R.Handler UserSelection)
               liftIO $ hUserSelection (UserSelection (Just 0))
-              bAvailable <- Token.availableSelection
+              userEnv <- Has.grab @UserEnv.UserEnv
+              let bFilterUser = isPrefixOf <$> UserEnv.bFilterUser userEnv
+              let bSelection = UserEnv.bSelectionUser userEnv
+              bAvailable <- Token.availableSelection bSelection bFilterUser
               available <- R.currentValue bAvailable
               let value = False
               liftIO $ value @=? available

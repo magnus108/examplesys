@@ -38,6 +38,7 @@ import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.TabButton as TabButton
 import qualified Piece.Gui.Tab.TabView as TabView
 import qualified Piece.Gui.User.Create as UserCreate
+import qualified Piece.Gui.User.Edit as UserEdit
 import qualified Piece.Gui.User.List as UserList
 import qualified Piece.Gui.User.Login as UserLogin
 import qualified Piece.Time.Time as Time
@@ -61,8 +62,16 @@ main port = do
       userCreate <- UserCreate.setup env
       userLogin <- UserLogin.setup env
       userList <- UserList.setup env
+      userEdit <- UserEdit.setup env
 
-      let tabViews = [UI.getElement loanCreate, UI.getElement userCreate, UI.getElement userLogin, UI.getElement userList]
+      let tabViews =
+            [ UI.getElement loanCreate,
+              UI.getElement userCreate,
+              UI.getElement userLogin,
+              UI.getElement userList,
+              UI.getElement userEdit
+            ]
+
       tabs <- TabButton.setup env
       views <- TabView.setup env tabViews
       _ <- UI.getBody window UI.#+ [UI.element tabs, UI.element views]
@@ -99,8 +108,18 @@ main port = do
         let tUserDelete = UserList.tUserDelete userList
             eUserDelete = R.rumors tUserDelete
 
+        ---- EDIT
+        let tUserFilterEdit = UserEdit.tUserFilter userEdit
+            eUserFilterEdit = R.rumors tUserFilterEdit
+
+        let tUserSelectionEdit = UserEdit.tUserSelection userEdit
+            eUserSelectionEdit = R.rumors tUserSelectionEdit
+
+        let tUserEdit = UserEdit.tUserEdit userEdit
+            eUserEdit = R.rumors tUserEdit
+
         timeEnv <- timeEnvSetup config eTime
-        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete
+        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit eUserEdit
         tokenEnv <- tokenEnvSetup config eUserLogin eTime
         loanEnv <- loanEnvSetup config loanCreate
         roleEnv <- roleEnvSetup config R.never
@@ -277,8 +296,12 @@ userEnvSetup ::
   R.Event (Maybe Db.DatabaseKey) ->
   R.Event String ->
   R.Event (Maybe Db.DatabaseKey) ->
+  -- EDIT
+  R.Event (Maybe Db.DatabaseKey) ->
+  R.Event String ->
+  R.Event (Maybe Db.DatabaseKey) ->
   m UserEnv.UserEnv
-userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser eUserDelete = do
+userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser eUserDelete eSelectUserEdit eFilterUserEdit eUserEdit = do
   bUserCreateForm <- userCreateFormSetup eUserCreateForm eUserCreate
   bUserCreate <- userCreateSetup eUserCreate
   bUserLoginForm <- userLoginFormSetup eUserLoginForm eUserLogin
@@ -287,8 +310,11 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
 
   bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectUser, Nothing <$ eUserDelete]
   bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUser]
-
   bUserDelete <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserDelete]
+
+  bSelectionUserEdit <- R.stepper Nothing $ Unsafe.head <$> R.unions [eSelectUserEdit, Nothing <$ eUserEdit]
+  bFilterUserEdit <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUserEdit]
+  bUserEdit <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserEdit]
 
   return $
     UserEnv.UserEnv
@@ -299,7 +325,11 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
         bUserLogin = bUserLogin,
         bSelectionUser = bSelectionUser,
         bFilterUser = bFilterUser,
-        bUserDelete = bUserDelete
+        bUserDelete = bUserDelete,
+        -- Edit
+        bSelectionUserEdit = bSelectionUserEdit,
+        bFilterUserEdit = bFilterUserEdit,
+        bUserEdit = bUserEdit
       }
 
 loanEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Loan.Loan)) => Config.Config -> LoanCreate.Create -> m Env.LoanEnv

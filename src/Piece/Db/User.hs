@@ -46,10 +46,4 @@ bListBox :: (Env.WithUserEnv env m) => m (R.Behavior [Db.DatabaseKey])
 bListBox = do
   userEnv <- Has.grab @UserEnv.UserEnv
   let bDatabaseUser = UserEnv.bDatabaseUser userEnv
-  let bFilterUser = isPrefixOf <$> UserEnv.bFilterUser userEnv
-  bShowUser <- showUser
-  return $
-    (\p display -> filter (p . display) . Db.keys)
-      <$> bFilterUser
-      <*> bShowUser
-      <*> bDatabaseUser
+  return $ Db.keys <$> bDatabaseUser

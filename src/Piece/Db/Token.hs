@@ -3,6 +3,7 @@ module Piece.Db.Token
     getTime,
     isTokenUser,
     bOtherUsers,
+    bOtherUsersFilter,
     getUserId,
     getUser,
     getRoleIds,
@@ -127,8 +128,14 @@ bOtherUsers = do
   bIsTokenUser <- isTokenUser
   return $ (\p -> filter (not . p)) <$> bIsTokenUser <*> bUsers
 
-availableSelection :: (Env.WithUserEnv env m, Env.WithTokenEnv env m) => m (R.Behavior Bool)
-availableSelection = do
+bOtherUsersFilter :: (Env.WithTokenEnv env m, Env.WithUserEnv env m) => R.Behavior (String -> Bool) -> m (R.Behavior [Db.DatabaseKey])
+bOtherUsersFilter bFilter = do
+  bShowUser <- User.showUser
+  bUsers <- bOtherUsers
+  return $ (\p display -> filter (p . display)) <$> bFilter <*> bShowUser <*> bUsers
+
+availableSelection :: (Env.WithUserEnv env m, Env.WithTokenEnv env m) => R.Behavior (Maybe Db.DatabaseKey) -> R.Behavior (String -> Bool) -> m (R.Behavior Bool)
+availableSelection bSelection bFilter = do
   userEnv <- Has.grab @UserEnv.UserEnv
-  otherUsers <- bOtherUsers
-  return $ maybe False . flip elem <$> otherUsers <*> UserEnv.bSelectionUser userEnv
+  otherUsers <- bOtherUsersFilter bFilter
+  return $ maybe False . flip elem <$> otherUsers <*> bSelection
