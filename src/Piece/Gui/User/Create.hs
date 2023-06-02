@@ -9,6 +9,7 @@ module Piece.Gui.User.Create
 where
 
 import Control.Concurrent
+import qualified Control.Concurrent.Async as Async
 import Data.Text
 import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
@@ -75,17 +76,13 @@ setup env = mdo
       bUserCreateForm = UI.facts tUserCreateForm
       eCreate = UI.click createBtn
 
-  (eClick1, hClick1) <- liftIO R.newEvent
-  (eClick2, hClick2) <- liftIO R.newEvent
-
+  (eUser, hUser) <- liftIO $ R.newEvent
   _ <- UI.onEvent eCreate $ \_ -> UI.liftIOLater $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
-    hClick1 ()
     userCreateForm <- R.currentValue bUserCreateForm
     val <- run $ User.create userCreateForm
-    hClick2 val
+    hUser val
 
-  bEnabled <- R.stepper True $ Unsafe.head <$> R.unions [False <$ eClick1, True <$ eClick2]
+  bEnabled <- R.stepper True $ Unsafe.head <$> R.unions [False <$ eCreate, True <$ eUser]
 
-  let tUserCreate = UI.tidings (UserEnv.bUserCreate userEnv) eClick2
-
+  let tUserCreate = UI.tidings (UserEnv.bUserCreate userEnv) eUser
   return Create {..}
