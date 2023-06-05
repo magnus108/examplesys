@@ -64,8 +64,7 @@ setup env = mdo
 
   (userName, userNameView) <- mkInput' "Username" (fmap (\x -> getConst $ x ^. field @"name") <$> UserEnv.bUserEditForm userEnv)
   (userPassword, userPasswordView) <- mkInput' "Password" (fmap (\x -> getConst $ x ^. field @"password") <$> UserEnv.bUserEditForm userEnv)
-  -- (userAdmin, userAdminView) <- mkCheckbox' "Admin" (fmap (\xs -> elem 2 $ fmap Unsafe.read (splitOn "," xs)) <$> (fmap (\x -> getConst $ x ^. field @"roles")) <$> UserEnv.bUserEditForm userEnv) -- SKAL rykkes ud!
-  (userAdmin, userAdminView) <- mkCheckbox' "Admin" (fmap (const True) <$> (fmap (\x -> getConst $ x ^. field @"roles")) <$> UserEnv.bUserEditForm userEnv) -- SKAL rykkes ud!
+  (userAdmin, userAdminView) <- mkCheckbox' "Admin" (fmap (\xs -> elem 2 $ mapMaybe readMaybe (splitOn "," xs)) <$> (fmap (\x -> getConst $ x ^. field @"roles")) <$> UserEnv.bUserEditForm userEnv) -- SKAL rykkes ud!
   (editBtn, editBtnView) <- mkButton "Change"
 
   _ <- UI.element editBtn UI.# UI.sink UI.enabled (isJust <$> UserEnv.bUserEditForm userEnv)
