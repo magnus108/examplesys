@@ -1,22 +1,27 @@
 module Piece.Core.UserEditForm
   ( User,
-    name,
     user,
-    password,
-    admin,
+    Mk (..),
   )
 where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Functor.Product (Product)
+import Data.Generic.HKD
 import qualified Piece.CakeSlayer.Password as Password
+import qualified Piece.Core.User as User
+import Prelude hiding (Product)
 
-data User = User
-  { name :: String,
-    password :: Password.PasswordPlainText,
-    admin :: Bool
+type User = HKD User.User F
+
+data Mk a = Mk
+  { form :: String,
+    read :: Maybe a,
+    write :: IO a
   }
-  deriving stock (Show, Eq, Generic)
-  deriving (ToJSON, FromJSON)
+  deriving (Functor)
 
-user :: String -> Password.PasswordPlainText -> Bool -> User
-user = User
+type F = Const String
+
+user :: F String -> F Password.PasswordHash -> F [Int] -> User
+user = build @User.User

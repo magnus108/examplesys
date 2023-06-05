@@ -9,7 +9,6 @@ where
 
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Piece.CakeSlayer.Password as Password
-import qualified Piece.Core.Role as Role
 
 data User = User
   { name :: String,

@@ -1,4 +1,9 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Piece.Gui.User.Edit
   ( setup,
@@ -15,6 +20,11 @@ module Piece.Gui.User.Edit
   )
 where
 
+import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import Data.Aeson.KeyMap (lookup)
+import Data.Functor.Product
+import Data.Generic.HKD (field)
+import Data.List.Split (splitOn)
 import Data.Text (pack, unpack)
 import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
@@ -50,22 +60,15 @@ instance UI.Widget Edit where
 
 setup :: Monad.AppEnv -> UI.UI Edit
 setup env = mdo
-  ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers (UserEnv.bSelectionUserEdit userEnv) bDisplayUser (UserEnv.bFilterUserEdit userEnv)
+  ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers bSelection bDisplayUser (UserEnv.bFilterUserEdit userEnv)
 
-  (userName, userNameView) <- mkInput "Username" (maybe "" UserEditForm.name <$> UserEnv.bUserEditForm userEnv)
-  (userPassword, userPasswordView) <- mkInput "Password" (maybe "" (unpack . Password.unPasswordPlainText . UserEditForm.password) <$> UserEnv.bUserEditForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckbox "Admin" (maybe False UserEditForm.admin <$> UserEnv.bUserEditForm userEnv)
+  (userName, userNameView) <- mkInput' "Username" (fmap (\x -> getConst $ x ^. field @"name") <$> UserEnv.bUserEditForm userEnv)
+  (userPassword, userPasswordView) <- mkInput' "Password" (fmap (\x -> getConst $ x ^. field @"password") <$> UserEnv.bUserEditForm userEnv)
+  -- (userAdmin, userAdminView) <- mkCheckbox' "Admin" (fmap (\xs -> elem 2 $ fmap Unsafe.read (splitOn "," xs)) <$> (fmap (\x -> getConst $ x ^. field @"roles")) <$> UserEnv.bUserEditForm userEnv) -- SKAL rykkes ud!
+  (userAdmin, userAdminView) <- mkCheckbox' "Admin" (fmap (const True) <$> (fmap (\x -> getConst $ x ^. field @"roles")) <$> UserEnv.bUserEditForm userEnv) -- SKAL rykkes ud!
   (editBtn, editBtnView) <- mkButton "Change"
 
-  -- GUI layout
-  _ <- UI.element userName UI.# UI.sink UI.enabled bEnabled
-  _ <- UI.element userPassword UI.# UI.sink UI.enabled bEnabled
-  _ <- UI.element userAdmin UI.# UI.sink UI.enabled bEnabled
-  _ <- UI.element editBtn UI.# UI.sink UI.enabled ((&&) <$> bEnabled <*> (isJust <$> UserEnv.bUserEditForm userEnv))
-
-  let tUserName = UI.userText userName
-  let tUserPassword = Password.PasswordPlainText . pack <$> UI.userText userPassword
-  let tUserAdmin = Checkbox.userCheck userAdmin
+  _ <- UI.element editBtn UI.# UI.sink UI.enabled (isJust <$> UserEnv.bUserEditForm userEnv)
 
   view <-
     mkContainer
@@ -87,9 +90,7 @@ setup env = mdo
   userEnv <- liftIO $ Monad.runApp env $ Has.grab @UserEnv.UserEnv
   let bSelection = UserEnv.bSelectionUserEdit userEnv
   let bFilterUser = isPrefixOf <$> UserEnv.bFilterUserEdit userEnv
-
   bDisplayUser <- liftIO $ Monad.runApp env Behavior.displayUser
-  bAvailable <- liftIO $ Monad.runApp env (Token.availableSelection bSelection bFilterUser)
   bOtherUsers <- liftIO $ Monad.runApp env (Token.bOtherUsersFilter bFilterUser)
 
   let tUserSelection = UI.userSelection listBoxUser
@@ -98,7 +99,16 @@ setup env = mdo
 
   let tUserFilter = UI.userText filterUser
 
-  let tUserEditForm = UserEditForm.user <$> tUserName <*> tUserPassword <*> tUserAdmin
+  bUserLookup <- liftIO $ Monad.runApp env $ User.lookup
+  let eLookup = (\x -> User.formEdit =<< x) <$> (bUserLookup UI.<@> (R.filterJust eUserSelection))
+
+  let tUserName = UI.userText userName
+      tUserPassword = UI.userText userPassword
+      tUserAdmin = (\x -> if x then "0, 1, 2" else "0, 1") <$> Checkbox.userCheck userAdmin -- SKAL rykkes ud
+      tUserEditForm' = UserEditForm.user <$> (fmap Const tUserName) <*> (fmap Const tUserPassword) <*> (fmap Const tUserAdmin)
+      bUserEditForm' = UI.facts tUserEditForm'
+      eUserEditForm' = UI.rumors tUserEditForm'
+      tUserEditForm = R.tidings bUserEditForm' $ Unsafe.head <$> R.unions [eUserEditForm', R.filterJust eLookup]
       bUserEditForm = UI.facts tUserEditForm
       eEdit = UI.click editBtn
 
@@ -108,16 +118,19 @@ setup env = mdo
   _ <- UI.onEvent eEdit $ \_ -> UI.liftIOLater $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
     hClick1 ()
     userEditForm <- R.currentValue bUserEditForm
-    val <- run $ User.edit userEditForm
-    hClick2 val
-
-  bEnabledLoading <- R.stepper True $ Unsafe.head <$> R.unions [False <$ eClick1, True <$ eClick2]
-
-  let bEnabled = (&&) <$> bEnabledLoading <*> (isJust <$> UserEnv.bSelectionUserEdit userEnv)
+    bLookup <- run $ User.lookup
+    lookup <- R.currentValue bLookup
+    userSelection <- R.currentValue bUserSelection
+    let user = lookup =<< userSelection
+    case user of
+      Nothing -> return ()
+      Just u -> hClick2 =<< User.edit u userEditForm
 
   let tUserEditKeyValue = UI.tidings (UserEnv.bUserEditKeyValue userEnv) (liftA2 (,) <$> bUserSelection UI.<@> eClick2)
 
   return Edit {..}
+
+-------------------------------------------------------------------------------
 
 mkListBox :: forall a. (Ord a) => R.Behavior [a] -> R.Behavior (Maybe a) -> R.Behavior (a -> UI.UI UI.Element) -> UI.UI (UI.ListBox a, UI.Element)
 mkListBox bItems bSel bDisplay = do
@@ -137,6 +150,17 @@ mkListBox bItems bSel bDisplay = do
 
 mkSearch :: R.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
 mkSearch = mkInput "Søg"
+
+mkInput' :: String -> UI.Behavior (Maybe String) -> UI.UI (UI.TextEntry, UI.Element)
+mkInput' label bFilterItem = do
+  filterItem <- UI.entry (fromMaybe "" <$> bFilterItem)
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input" UI.# UI.sink UI.enabled (isJust <$> bFilterItem)]
+            ]
+  return (filterItem, view)
 
 mkInput :: String -> UI.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
 mkInput label bFilterItem = do
@@ -187,5 +211,16 @@ mkCheckbox label bCheck = do
       UI.#. "field"
       UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
               UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox"]
+            ]
+  return (elem, view)
+
+mkCheckbox' :: String -> R.Behavior (Maybe Bool) -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
+mkCheckbox' label bCheck = do
+  elem <- Checkbox.entry (fromMaybe False <$> bCheck)
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox" UI.# UI.sink UI.enabled (isJust <$> bCheck)]
             ]
   return (elem, view)
