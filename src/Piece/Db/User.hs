@@ -77,7 +77,7 @@ formEdit :: User.User -> Maybe UserEditForm.User
 formEdit user =
   let name = Const $ User.name user
       password = Const ""
-      roles = Const ""
+      roles = Const $ intercalate "," . fmap show $ User.roles user
    in Just (UserEditForm.user name password roles)
 
 bListBox :: (Env.WithUserEnv env m) => m (R.Behavior [Db.DatabaseKey])

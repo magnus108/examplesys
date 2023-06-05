@@ -103,7 +103,7 @@ setup env = mdo
 
   let tUserName = UI.userText userName
       tUserPassword = UI.userText userPassword
-      tUserAdmin = (\x -> if x then "0, 1, 2" else "0, 1") <$> Checkbox.userCheck userAdmin -- SKAL rykkes ud
+      tUserAdmin = (\x -> if x then "0,1,2" else "0,1") <$> Checkbox.userCheck userAdmin -- SKAL rykkes ud
       tUserEditForm' = UserEditForm.user <$> (fmap Const tUserName) <*> (fmap Const tUserPassword) <*> (fmap Const tUserAdmin)
       bUserEditForm' = UI.facts tUserEditForm'
       eUserEditForm' = UI.rumors tUserEditForm'
