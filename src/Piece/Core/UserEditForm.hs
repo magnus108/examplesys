@@ -1,7 +1,6 @@
 module Piece.Core.UserEditForm
   ( User,
     user,
-    Mk (..),
   )
 where
 
@@ -12,16 +11,7 @@ import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
 import Prelude hiding (Product)
 
-type User = HKD User.User F
+type User = HKD User.User (Const String)
 
-data Mk a = Mk
-  { form :: String,
-    read :: Maybe a,
-    write :: IO a
-  }
-  deriving (Functor)
-
-type F = Const String
-
-user :: F String -> F Password.PasswordHash -> F [Int] -> User
+user :: f String -> f Password.PasswordHash -> f [Int] -> HKD User.User f
 user = build @User.User
