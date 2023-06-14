@@ -16,6 +16,8 @@ module Piece.Db.User
 where
 
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import Data.Barbie
+import Data.Functor.Barbie
 import Data.Functor.Product
 import Data.Generic.HKD
 import Data.List.Split (splitOn)
@@ -30,6 +32,7 @@ import qualified Piece.Core.UserEditForm as UserEditForm
 import qualified Piece.Db.Db as Db
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
+import Prelude hiding (Product)
 
 lookup :: (Env.WithUserEnv env m) => m (R.Behavior (Db.DatabaseKey -> Maybe User.User))
 lookup = do
@@ -48,16 +51,40 @@ getRoles = do
 
 create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
 create form = do
-  let formName = UserCreateForm.name form
-      formPassword = UserCreateForm.password form
-      formAdmin = UserCreateForm.admin form
-      roles = if formAdmin then [0, 1, 2] else [0, 1]
-  password <- Password.mkPasswordHash formPassword
-  return $ case password of
-    Nothing -> Nothing
-    Just p -> Just (User.user formName p roles)
+  password <- mapM (Password.mkPasswordHash . Password.PasswordPlainText . pack) (UserCreateForm.toPassword form)
+  return $ User.user <$> UserCreateForm.toName form <*> join password <*> UserCreateForm.toRoles form
 
-edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User)
+create2 :: MonadIO m => UserCreateForm.User -> HKD User.User (Compose m Maybe)
+create2 form =
+  let (unzip1, unzip2) = bunzip form
+   in undefined
+
+-- bmap f form
+
+-- f :: (MonadIO m, UserCreateForm.MyHashable m (Product UserCreateForm.FormInput UserCreateForm.Hash) a) => Product UserCreateForm.FormInput UserCreateForm.Hash a -> Compose m Maybe a
+
+{-
+f :: (AllBF UserCreateForm.MyHashable UserCreateForm.Hash UserCreateForm.User, ConstraintsB UserCreateForm.User) => UserCreateForm.FormInput a -> UserCreateForm.Hash a -> Compose IO Maybe a
+f formInput hash = case formInput of
+  Nothing -> case getCompose hash of
+    Nothing -> Compose $ return $ Nothing
+    Just y -> UserCreateForm.hash hash
+  Just x -> Compose $ return $ formInput
+  -}
+
+-- gg :: (AllBF UserCreateForm.MyHashable f b, ConstraintsB b) => b (Product UserCreateForm.FormInput UserCreateForm.Hash) -> b (Const String)
+-- gg = bmapC @UserCreateForm.MyHashable showField
+-- where
+--  showField :: forall a. UserCreateForm.MyHashable a => Product UserCreateForm.FormInput UserCreateForm.Hash a -> Const String a
+-- showField x = undefined -- Const (show a)
+
+showFields :: (AllB UserCreateForm.MyHashable b, ConstraintsB b) => b (Const String) -> b Maybe
+showFields = bmapC @UserCreateForm.MyHashable showField
+  where
+    showField :: forall a. UserCreateForm.MyHashable a => Const String a -> Maybe a
+    showField (Const s) = UserCreateForm.hash s
+
+edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User) -- fromForm
 edit user form = do
   let formName = form ^. field @"name"
       formPassword = form ^. field @"password"
@@ -73,7 +100,7 @@ edit user form = do
     Nothing -> Nothing
     Just p -> Just (User.user formName' p formRoles')
 
-formEdit :: User.User -> Maybe UserEditForm.User
+formEdit :: User.User -> Maybe UserEditForm.User -- toForm
 formEdit user =
   let name = Const $ User.name user
       password = Const ""

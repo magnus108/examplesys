@@ -1,4 +1,9 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Piece.Gui.User.Create
   ( setup,
@@ -10,7 +15,8 @@ where
 
 import Control.Concurrent
 import qualified Control.Concurrent.Async as Async
-import Data.Text
+import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import Data.Generic.HKD (field)
 import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
@@ -42,9 +48,9 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  (userName, userNameView) <- mkInput "Username" (maybe "" UserCreateForm.name <$> UserEnv.bUserCreateForm userEnv)
-  (userPassword, userPasswordView) <- mkInput "Password" (maybe "" (unpack . Password.unPasswordPlainText . UserCreateForm.password) <$> UserEnv.bUserCreateForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckbox "Admin" (maybe False UserCreateForm.admin <$> UserEnv.bUserCreateForm userEnv)
+  (userName, userNameView) <- mkInput "Username" (fromMaybe "" . (=<<) UserCreateForm.toName <$> UserEnv.bUserCreateForm userEnv)
+  (userPassword, userPasswordView) <- mkInput "Password" (fromMaybe "" . (=<<) UserCreateForm.toPassword <$> UserEnv.bUserCreateForm userEnv)
+  (userAdmin, userAdminView) <- mkCheckbox "Admin" (fromMaybe False . (=<<) (fmap (elem 2) . UserCreateForm.toRoles) <$> UserEnv.bUserCreateForm userEnv)
   (createBtn, createBtnView) <- mkButton "Opret"
 
   -- GUI layout
@@ -67,16 +73,17 @@ setup env = mdo
       ]
 
   let tUserName = UI.userText userName
-  let tUserPassword = Password.PasswordPlainText . pack <$> UI.userText userPassword
+  let tUserPassword = UI.userText userPassword
   let tUserAdmin = Checkbox.userCheck userAdmin
 
   userEnv <- liftIO $ Monad.runApp env $ Has.grab @UserEnv.UserEnv
 
-  let tUserCreateForm = UserCreateForm.user <$> tUserName <*> tUserPassword <*> tUserAdmin
+  let tUserCreateForm = UserCreateForm.form <$> tUserName <*> tUserPassword <*> tUserAdmin
       bUserCreateForm = UI.facts tUserCreateForm
       eCreate = UI.click createBtn
 
   (eUser, hUser) <- liftIO $ R.newEvent
+
   _ <- UI.onEvent eCreate $ \_ -> UI.liftIOLater $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
     userCreateForm <- R.currentValue bUserCreateForm
     val <- run $ User.create userCreateForm
