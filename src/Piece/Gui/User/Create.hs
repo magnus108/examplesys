@@ -48,9 +48,10 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  (userName, userNameView) <- mkInput "Username" (fromMaybe "" . (=<<) UserCreateForm.toName <$> UserEnv.bUserCreateForm userEnv)
-  (userPassword, userPasswordView) <- mkInput "Password" (fromMaybe "" . (=<<) UserCreateForm.toPassword <$> UserEnv.bUserCreateForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckbox "Admin" (fromMaybe False . (=<<) (fmap (elem 2) . UserCreateForm.toRoles) <$> UserEnv.bUserCreateForm userEnv)
+  (userName, userNameView) <- mkInput "Username" undefined -- ((\x -> fmap (\y -> _ (y ^. field @"name")) x) <$> UserEnv.bUserCreateForm userEnv)
+  --  (userName, userNameView) <- mkInput "Username" (fromMaybe "" . (=<<) UserCreateForm.toName <$> UserEnv.bUserCreateForm userEnv)
+  (userPassword, userPasswordView) <- mkInput "Password" undefined -- (\x -> fromMaybe "" (UserCreateForm.toStringData (UserCreateForm.toForm x x)) <$> UserEnv.bUserCreateForm userEnv)
+  (userAdmin, userAdminView) <- mkCheckbox "Admin" undefined -- (\x -> fromMaybe False (UserCreateForm.toBoolData (UserCreateForm.toForm x x)) <$> UserEnv.bUserCreateForm userEnv)
   (createBtn, createBtnView) <- mkButton "Opret"
 
   -- GUI layout

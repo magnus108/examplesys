@@ -1,20 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Piece.Core.UserCreateForm
   ( User,
     user,
+    mainer,
     form,
     toName,
-    toPassword,
-    toRoles,
-    FormInput,
-    Hash,
-    MyHashable (..),
   )
 where
 
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import Control.Monad.Signatures (Pass)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Functor.Product
 import Data.Functor.Product (Product)
@@ -24,91 +23,78 @@ import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
 import Prelude hiding (Product)
 
-type FormInput = Maybe
+type User = HKD User.User FormDataExpr
 
-type Hash = Compose Maybe (Const String)
+toName :: User -> String
+toName user =
+  let formName = user ^. field @"name"
+   in fromStringExpr $ formName
 
-type User = HKD User.User (Product FormInput Hash)
+toPassword :: User -> String
+toPassword user =
+  let formPassword = user ^. field @"password"
+   in fromPasswordHashExpr $ formPassword
+
+data FormDataExpr a where
+  StringExpr :: String -> FormDataExpr String
+  PasswordExpr :: FormDataExpr String -> FormDataExpr Password.PasswordHash
+  BoolExpr :: Bool -> FormDataExpr [Int]
 
 user :: f String -> f Password.PasswordHash -> f [Int] -> HKD User.User f
 user = build @User.User
 
-toName :: User -> Maybe String
-toName user =
-  let formName = user ^. field @"name"
-   in fst_ formName
-
-toPassword :: User -> Maybe String
-toPassword user =
-  let formPassword = user ^. field @"password"
-   in fmap (getConst) $ getCompose $ snd_ formPassword
-
-toRoles :: User -> Maybe [Int]
-toRoles user =
-  let formRoles = user ^. field @"roles"
-   in fst_ formRoles
-
-fst_ :: Product g h p -> g p
-fst_ (Pair x _) = x
-
-snd_ :: Product g h p -> h p
-snd_ (Pair _ y) = y
-
 form :: String -> String -> Bool -> User
 form name password admin =
   user
-    (Pair (Just name) (Compose Nothing))
-    (Pair Nothing (Compose (Just (Const password))))
-    (Pair (if admin then Just [2] else Just []) (Compose Nothing))
+    (StringExpr name)
+    (PasswordExpr (StringExpr password))
+    (BoolExpr admin)
 
-class MyHashable a where
-  hash :: String -> Maybe a -- IO (Maybe Password.PasswordHash)
+fromStringExpr :: FormDataExpr String -> String
+fromStringExpr (StringExpr x) = x
 
--- instance MonadIO m => MyHashable m Hash (Password.PasswordHash) where
-instance MyHashable Password.PasswordHash where
-  hash x = Nothing
+fromPasswordHashExpr :: FormDataExpr Password.PasswordHash -> String
+fromPasswordHashExpr (PasswordExpr x) = fromStringExpr x
 
-instance MyHashable String where
-  hash x = Nothing
+evalFormDataParser :: FormDataExpr a -> Compose IO Maybe a
+evalFormDataParser (StringExpr s) = Compose (return (Just s))
+evalFormDataParser (PasswordExpr (StringExpr s)) = Compose . Password.mkPasswordHash . Password.PasswordPlainText . pack $ s
+evalFormDataParser (BoolExpr b) = Compose (return (Just (if b then [3] else [])))
 
-instance MyHashable [Int] where
-  hash x = Nothing
+data Lol a where
+  StringL :: String -> Lol String
+  PasswordL :: String -> Lol Password.PasswordHash
+  BoolL :: Bool -> Lol [Int]
 
-data FormDataParser a where
-  StringE :: String -> FormDataParser String
-  PasswordE :: String -> FormDataParser Password.PasswordHash
-  BoolE :: Bool -> FormDataParser [Int]
+type family ConstructionParams a where
+  ConstructionParams (Lol String) = String
+  ConstructionParams (Lol [Int]) = Bool
+  ConstructionParams (Lol Password.PasswordHash) = String
 
-evalFormDataParser2 :: FormDataParser a -> Compose IO Maybe a
-evalFormDataParser2 (StringE s) = Compose (return (Just s))
-evalFormDataParser2 (PasswordE s) = Compose . Password.mkPasswordHash . Password.PasswordPlainText . pack $ s
-evalFormDataParser2 (BoolE b) = Compose (return (Just (if b then [3] else [])))
+getConstructionParams :: Lol a -> ConstructionParams (Lol a)
+getConstructionParams (StringL param) = param
+getConstructionParams (PasswordL param) = param
+getConstructionParams (BoolL param) = param
 
-gg = evalFormDataParser2 $ PasswordE "lol"
+getit :: MonadIO m => Lol a -> m (Maybe a)
+getit (StringL param) = return $ Just param
+getit (PasswordL param) = Password.mkPasswordHash . Password.PasswordPlainText . pack $ param
+getit (BoolL param) = return $ Just $ if param then [3] else []
 
--- instance MonadIO m => MyHashable m (Product FormInput Hash) (Password.PasswordHash) where
---  hash x = Compose (join <$> mapM (Password.mkPasswordHash . Password.PasswordPlainText . pack) (fmap (getConst . getCompose) $ getCompose $ snd_ x))
+type Loler = HKD User.User Lol
 
-{-
-form =
-  let name = "bob"
-      password = "code"
-      admin = True
-      mus = us (Pair (Just name) (Compose Nothing)) (Pair Nothing (Compose (Just (Const "code")))) (Pair (if admin then Just [3] else Just []) (Compose Nothing))
-   in mus
+loller :: String -> String -> Bool -> Loler
+loller name password admin =
+  user
+    (StringL name)
+    (PasswordL password)
+    (BoolL admin)
 
-backToForm :: (String, Text, Bool)
-backToForm =
-  let formName = mus ^. field @"_name" -- Just bob
-      formPassword = mus ^. field @"_password" -- Alsways nothing meaning we dont store right value
-      formRoles = mus ^. field @"_roles" -- Just [1,2,3]
-   in (fromMaybe "" formName, fromMaybe (pack "") formPassword, maybe False (elem 3) formRoles)
-   -}
-
--- Form til MaybeUs
--- MaybeUs til Form
--- MaybeHashUs -> MaybeUs -> Us
-
--- name :: Nothing                      name :: Just String              name :: Identity String
--- password :: Just (Hash String)       password :: Nothing              password :: Identity String
--- Admin :: Nothing                     Admin :: Just [1,2]              Admin :: Identity [Int]
+mainer :: IO ()
+mainer = do
+  let fooParam = getConstructionParams (PasswordL "hallA") :: String
+  let barParam = getConstructionParams (StringL "lola") :: String
+  ada <- getit (PasswordL "haalal")
+  print ada
+  print fooParam -- Output: 42
+  print barParam -- Output: True

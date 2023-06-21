@@ -51,13 +51,15 @@ getRoles = do
 
 create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
 create form = do
-  password <- mapM (Password.mkPasswordHash . Password.PasswordPlainText . pack) (UserCreateForm.toPassword form)
-  return $ User.user <$> UserCreateForm.toName form <*> join password <*> UserCreateForm.toRoles form
+  undefined
+
+--  password <- mapM (Password.mkPasswordHash . Password.PasswordPlainText . pack) (UserCreateForm.toPassword form)
+-- return $ User.user <$> Just (UserCreateForm.toName form) <*> join password <*> UserCreateForm.toRoles form
 
 create2 :: MonadIO m => UserCreateForm.User -> HKD User.User (Compose m Maybe)
 create2 form =
-  let (unzip1, unzip2) = bunzip form
-   in undefined
+  -- (unzip1, unzip2) = bunzip form
+  undefined
 
 -- bmap f form
 
@@ -77,12 +79,6 @@ f formInput hash = case formInput of
 -- where
 --  showField :: forall a. UserCreateForm.MyHashable a => Product UserCreateForm.FormInput UserCreateForm.Hash a -> Const String a
 -- showField x = undefined -- Const (show a)
-
-showFields :: (AllB UserCreateForm.MyHashable b, ConstraintsB b) => b (Const String) -> b Maybe
-showFields = bmapC @UserCreateForm.MyHashable showField
-  where
-    showField :: forall a. UserCreateForm.MyHashable a => Const String a -> Maybe a
-    showField (Const s) = UserCreateForm.hash s
 
 edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User) -- fromForm
 edit user form = do
