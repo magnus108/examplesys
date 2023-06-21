@@ -51,15 +51,11 @@ getRoles = do
 
 create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
 create form = do
-  undefined
+  gg <- liftIO $ bsequence $ bmap UserCreateForm.constructData form
+  return $ construct @Maybe gg
 
 --  password <- mapM (Password.mkPasswordHash . Password.PasswordPlainText . pack) (UserCreateForm.toPassword form)
 -- return $ User.user <$> Just (UserCreateForm.toName form) <*> join password <*> UserCreateForm.toRoles form
-
-create2 :: MonadIO m => UserCreateForm.User -> HKD User.User (Compose m Maybe)
-create2 form =
-  -- (unzip1, unzip2) = bunzip form
-  undefined
 
 -- bmap f form
 
