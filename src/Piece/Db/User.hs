@@ -19,6 +19,7 @@ import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
 import Data.Barbie
 import Data.Functor.Barbie
 import Data.Functor.Product
+import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
 import Data.List.Split (splitOn)
 import Data.Text (pack, unpack)
@@ -51,7 +52,7 @@ getRoles = do
 
 create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
 create form = do
-  hala <- liftIO $ bsequence $ bmap (\x -> fromMaybe (Compose $ return $ Nothing) $ rightToMaybe $ fmap UserCreateForm.constructData (getCompose x)) form
+  hala <- liftIO $ bsequence $ bmap (\(Product.Pair conf x) -> UserCreateForm.constructData x) form
   return $ construct @Maybe hala
 
 edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User) -- fromForm

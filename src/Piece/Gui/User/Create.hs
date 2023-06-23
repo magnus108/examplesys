@@ -17,6 +17,7 @@ where
 import Control.Concurrent
 import qualified Control.Concurrent.Async as Async
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
 import Data.Generic.HKD (field)
 import qualified Graphics.UI.Threepenny.Attributes as UI
@@ -52,9 +53,9 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  (userName, userNameView) <- mkInputter "Username" ((\y -> fromMaybe (Right "") (UserCreateForm.toName <$> y)) <$> UserEnv.bUserCreateForm userEnv)
-  (userPassword, userPasswordView) <- mkInputter "Password" ((\y -> fromMaybe (Right "") (UserCreateForm.toPassword <$> y)) <$> UserEnv.bUserCreateForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckboxer "Admin" ((\y -> fromMaybe (Right False) (UserCreateForm.toRoles <$> y)) <$> UserEnv.bUserCreateForm userEnv) -- (maybe False (\x -> getCompose $ UserCreateForm.getFormData (x ^. field @"roles")) <$> UserEnv.bUserCreateForm userEnv)
+  (userName, userNameView) <- mkInputter "Username" (maybe (UserCreateForm.Config True, "") (\y -> (UserCreateForm.toName y)) <$> UserEnv.bUserCreateForm userEnv)
+  (userPassword, userPasswordView) <- mkInputter "Password" (maybe (UserCreateForm.Config True, "") (\y -> (UserCreateForm.toPassword y)) <$> UserEnv.bUserCreateForm userEnv)
+  (userAdmin, userAdminView) <- mkCheckboxer "Admin" (maybe (UserCreateForm.Config True, True) (\y -> (UserCreateForm.toRoles y)) <$> UserEnv.bUserCreateForm userEnv)
   (createBtn, createBtnView) <- mkButton "Opret"
 
   view <-
@@ -81,7 +82,7 @@ setup env = mdo
 
       eCreate = UI.click createBtn
 
-      tUserCreatingForm = R.tidings bUserCreateForm $ (bmap (const (Compose (Left ()))) <$> bUserCreateForm) UI.<@ eCreate
+      tUserCreatingForm = R.tidings bUserCreateForm $ (bmap (\(Product.Pair conf x) -> Product.Pair (Const (UserCreateForm.Config False)) x) <$> bUserCreateForm) UI.<@ eCreate
 
   (eUser, hUser) <- liftIO $ R.newEvent
 

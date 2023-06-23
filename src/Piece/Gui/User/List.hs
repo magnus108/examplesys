@@ -16,6 +16,7 @@ module Piece.Gui.User.List
   )
 where
 
+import qualified Data.Functor.Product as Product
 import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
@@ -26,6 +27,7 @@ import qualified Piece.App.Monad as Monad
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.User as User
+import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
 import qualified Piece.Gui.Checkbox.Checkbox as Checkbox
@@ -98,14 +100,14 @@ mkListBox bItems bSel bDisplay = do
 mkSearch :: R.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
 mkSearch = mkInput "Søg"
 
-mkInputter :: String -> UI.Behavior (Either () String) -> UI.UI (UI.TextEntry, UI.Element)
+mkInputter :: String -> UI.Behavior ((UserCreateForm.Config, String)) -> UI.UI (UI.TextEntry, UI.Element)
 mkInputter label bFilterItem = do
-  filterItem <- UI.entry (fromMaybe "" . rightToMaybe <$> bFilterItem)
+  filterItem <- UI.entry ((\(a, b) -> b) <$> bFilterItem)
   view <-
     UI.div
       UI.#. "field"
       UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
-              UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input" UI.# UI.sink UI.enabled (isRight <$> bFilterItem)]
+              UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input" UI.# UI.sink UI.enabled ((\(UserCreateForm.Config a, b) -> a) <$> bFilterItem)]
             ]
   return (filterItem, view)
 
@@ -150,14 +152,14 @@ mkButton title = do
       UI.#+ [UI.div UI.#. "control" UI.#+ [UI.element button UI.#. "button"]]
   return (button, view)
 
-mkCheckboxer :: String -> R.Behavior (Either () Bool) -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
+mkCheckboxer :: String -> R.Behavior (UserCreateForm.Config, Bool) -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
 mkCheckboxer label bCheck = do
-  elem <- Checkbox.entry (fromMaybe False . rightToMaybe <$> bCheck)
+  elem <- Checkbox.entry ((\(a, b) -> b) <$> bCheck)
   view <-
     UI.div
       UI.#. "field"
       UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
-              UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox" UI.# UI.sink UI.enabled (isRight <$> bCheck)]
+              UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox" UI.# UI.sink UI.enabled ((\(UserCreateForm.Config a, b) -> a) <$> bCheck)]
             ]
   return (elem, view)
 

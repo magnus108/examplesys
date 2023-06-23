@@ -12,16 +12,20 @@ module Piece.Core.UserCreateForm
     toRoles,
     toPassword,
     toRoles,
+    Config (..),
   )
 where
 
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
 import Data.Text hiding (elem)
 import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
 
-type User = HKD User.User (Compose (Either ()) FormDataExpr)
+type User = HKD User.User (Product.Product (Const Config) FormDataExpr)
+
+data Config = Config {enabled :: Bool}
 
 data FormDataExpr a where
   StringExpr :: String -> FormDataExpr String
@@ -46,27 +50,24 @@ constructData (BoolExpr param) = Compose $ return $ Just $ if param then [3] els
 form :: String -> String -> Bool -> User
 form name password admin =
   build @User.User
-    (Compose (Right (StringExpr name)))
-    (Compose (Right (PasswordExpr password)))
-    (Compose (Right (BoolExpr admin)))
+    (Product.Pair (Const (Config True)) (StringExpr name))
+    (Product.Pair (Const (Config True)) (PasswordExpr password))
+    (Product.Pair (Const (Config True)) (BoolExpr admin))
 
-toName :: User -> Either () String
+toName :: User -> (Config, String)
 toName user =
-  let formName = user ^. field @"name"
-      dd = getCompose formName
-      zz = fmap getFormData dd
-   in zz
+  let (Product.Pair conf formName) = user ^. field @"name"
+      formData = getFormData formName
+   in (getConst conf, formData)
 
-toPassword :: User -> Either () String
+toPassword :: User -> (Config, String)
 toPassword user =
-  let formName = user ^. field @"password"
-      dd = getCompose formName
-      zz = fmap getFormData dd
-   in zz
+  let (Product.Pair conf formName) = user ^. field @"password"
+      formData = getFormData formName
+   in (getConst conf, formData)
 
-toRoles :: User -> Either () Bool
+toRoles :: User -> (Config, Bool)
 toRoles user =
-  let formName = user ^. field @"roles"
-      dd = getCompose formName
-      zz = fmap getFormData dd
-   in zz
+  let (Product.Pair conf formName) = user ^. field @"roles"
+      formData = getFormData formName
+   in (getConst conf, formData)
