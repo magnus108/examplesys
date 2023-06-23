@@ -88,7 +88,7 @@ setup env = mdo
 
   _ <- UI.onEvent eCreate $ \_ -> UI.liftIOLater $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
     userCreateForm <- R.currentValue bUserCreateForm
-    val <- run $ User.create userCreateForm
+    val <- run $ User.create userCreateForm -- Her sættter vi til true igen. aka behøver ikke default
     hUser val
 
   let tUserCreate = UI.tidings (UserEnv.bUserCreate userEnv) eUser
