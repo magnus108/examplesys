@@ -51,30 +51,8 @@ getRoles = do
 
 create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
 create form = do
-  gg <- liftIO $ bsequence $ bmap UserCreateForm.constructData form
-  return $ construct @Maybe gg
-
---  password <- mapM (Password.mkPasswordHash . Password.PasswordPlainText . pack) (UserCreateForm.toPassword form)
--- return $ User.user <$> Just (UserCreateForm.toName form) <*> join password <*> UserCreateForm.toRoles form
-
--- bmap f form
-
--- f :: (MonadIO m, UserCreateForm.MyHashable m (Product UserCreateForm.FormInput UserCreateForm.Hash) a) => Product UserCreateForm.FormInput UserCreateForm.Hash a -> Compose m Maybe a
-
-{-
-f :: (AllBF UserCreateForm.MyHashable UserCreateForm.Hash UserCreateForm.User, ConstraintsB UserCreateForm.User) => UserCreateForm.FormInput a -> UserCreateForm.Hash a -> Compose IO Maybe a
-f formInput hash = case formInput of
-  Nothing -> case getCompose hash of
-    Nothing -> Compose $ return $ Nothing
-    Just y -> UserCreateForm.hash hash
-  Just x -> Compose $ return $ formInput
-  -}
-
--- gg :: (AllBF UserCreateForm.MyHashable f b, ConstraintsB b) => b (Product UserCreateForm.FormInput UserCreateForm.Hash) -> b (Const String)
--- gg = bmapC @UserCreateForm.MyHashable showField
--- where
---  showField :: forall a. UserCreateForm.MyHashable a => Product UserCreateForm.FormInput UserCreateForm.Hash a -> Const String a
--- showField x = undefined -- Const (show a)
+  hala <- liftIO $ bsequence $ bmap (\x -> fromMaybe (Compose $ return $ Nothing) $ rightToMaybe $ fmap UserCreateForm.constructData (getCompose x)) form
+  return $ construct @Maybe hala
 
 edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User) -- fromForm
 edit user form = do

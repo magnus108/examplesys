@@ -89,6 +89,9 @@ main port = do
         let tUserCreate = UserCreate.tUserCreate userCreate
             eUserCreate = UI.rumors tUserCreate
 
+        let tUserCreatingForm = UserCreate.tUserCreatingForm userCreate
+            eUserCreatingForm = UI.rumors tUserCreatingForm
+
         let tUserCreateForm = UserCreate.tUserCreateForm userCreate
             eUserCreateForm = UI.rumors tUserCreateForm
 
@@ -124,7 +127,7 @@ main port = do
             eUserEditForm = UI.rumors tUserEditForm
 
         timeEnv <- timeEnvSetup config eTime
-        userEnv <- userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit eUserEditForm eUserEditKeyValue
+        userEnv <- userEnvSetup config (Unsafe.head <$> R.unions [eUserCreateForm, eUserCreatingForm]) eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit eUserEditForm eUserEditKeyValue
         tokenEnv <- tokenEnvSetup config eUserLogin eTime
         loanEnv <- loanEnvSetup config loanCreate
         roleEnv <- roleEnvSetup config R.never

@@ -8,8 +8,10 @@ module Piece.Gui.User.List
     Create,
     mkSearch,
     mkInput,
+    mkInputter,
     mkContainer,
     mkCheckbox,
+    mkCheckboxer,
     mkButton,
   )
 where
@@ -96,6 +98,17 @@ mkListBox bItems bSel bDisplay = do
 mkSearch :: R.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
 mkSearch = mkInput "Søg"
 
+mkInputter :: String -> UI.Behavior (Either () String) -> UI.UI (UI.TextEntry, UI.Element)
+mkInputter label bFilterItem = do
+  filterItem <- UI.entry (fromMaybe "" . rightToMaybe <$> bFilterItem)
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input" UI.# UI.sink UI.enabled (isRight <$> bFilterItem)]
+            ]
+  return (filterItem, view)
+
 mkInput :: String -> UI.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
 mkInput label bFilterItem = do
   filterItem <- UI.entry bFilterItem
@@ -136,6 +149,17 @@ mkButton title = do
       UI.#. "field"
       UI.#+ [UI.div UI.#. "control" UI.#+ [UI.element button UI.#. "button"]]
   return (button, view)
+
+mkCheckboxer :: String -> R.Behavior (Either () Bool) -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
+mkCheckboxer label bCheck = do
+  elem <- Checkbox.entry (fromMaybe False . rightToMaybe <$> bCheck)
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox" UI.# UI.sink UI.enabled (isRight <$> bCheck)]
+            ]
+  return (elem, view)
 
 mkCheckbox :: String -> R.Behavior Bool -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
 mkCheckbox label bCheck = do
