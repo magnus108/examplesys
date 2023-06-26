@@ -14,6 +14,8 @@ module Piece.Core.UserCreateForm
     toPassword,
     toRoles,
     Config (..),
+    FormDataExpr (..),
+    FormData (..),
   )
 where
 

@@ -12,7 +12,6 @@ module Piece.Db.User
     edit,
     bListBox,
     showUser,
-    formEdit,
   )
 where
 
@@ -59,30 +58,10 @@ create form = do
 isConfig :: UserCreateForm.User -> Bool
 isConfig form = getAny $ bfoldMap (\(Product.Pair (Const (UserCreateForm.Config conf)) x) -> Any conf) form
 
--- getAny $ construct @(Alt (Any)) gg
-
-edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User) -- fromForm
-edit user form = do
-  let formName = form ^. field @"name"
-      formPassword = form ^. field @"password"
-      formRoles = form ^. field @"roles"
-
-  let formName' = getConst formName
-      formPassword' = getConst formPassword
-      formRoles' = mapMaybe readMaybe (splitOn "," (getConst formRoles))
-
-  password <- Password.mkPasswordHash (Password.PasswordPlainText (pack formPassword'))
-
-  return $ case password of
-    Nothing -> Nothing
-    Just p -> Just (User.user formName' p formRoles')
-
-formEdit :: User.User -> Maybe UserEditForm.User -- toForm
-formEdit user =
-  let name = Const $ User.name user
-      password = Const ""
-      roles = Const $ intercalate "," . fmap show $ User.roles user
-   in Just (UserEditForm.user name password roles)
+edit :: MonadIO m => UserEditForm.User -> m (Maybe User.User)
+edit form = do
+  hala <- liftIO $ bsequence $ bmap (\(Product.Pair conf x) -> UserCreateForm.constructData x) form
+  return $ construct @Maybe hala
 
 bListBox :: (Env.WithUserEnv env m) => m (R.Behavior [Db.DatabaseKey])
 bListBox = do

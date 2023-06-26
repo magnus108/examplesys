@@ -129,8 +129,11 @@ main port = do
         let tUserEditForm = UserEdit.tUserEditForm userEdit
             eUserEditForm = UI.rumors tUserEditForm
 
+        let tUserEditingForm = UserEdit.tUserEditingForm userEdit
+            eUserEditingForm = UI.rumors tUserEditingForm
+
         timeEnv <- timeEnvSetup config eTime
-        userEnv <- userEnvSetup config (Unsafe.head <$> R.unions [eUserCreateForm, eUserCreatingForm]) eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit eUserEditForm eUserEditKeyValue
+        userEnv <- userEnvSetup config (Unsafe.head <$> R.unions [eUserCreateForm, eUserCreatingForm]) eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit (Unsafe.head <$> R.unions [eUserEditForm, eUserEditingForm]) eUserEditKeyValue
         tokenEnv <- tokenEnvSetup config eUserLogin eTime
         loanEnv <- loanEnvSetup config loanCreate
         roleEnv <- roleEnvSetup config R.never
@@ -329,7 +332,16 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
   bFilterUserEdit <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUserEdit]
   bUserEditKeyValue <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserEditKeyValue]
 
-  bUserEditForm <- R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserEditForm, Nothing <$ eUserEditKeyValue]
+  bLookup <- User.lookup
+  bUserEditForm <-
+    R.stepper (UserEditForm.form "" "" False) $
+      Unsafe.head
+        <$> R.unions
+          [ eUserEditForm,
+            UserEditForm.form "" "" False <$ eUserEditKeyValue,
+            UserEditForm.fromUser <$> UI.filterJust ((=<<) <$> bLookup UI.<@> eSelectUserEdit)
+          ]
+
   return $
     UserEnv.UserEnv
       { bDatabaseUser = bDatabaseUser,
