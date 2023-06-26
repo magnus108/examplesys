@@ -10,7 +10,7 @@ import qualified Reactive.Threepenny as R
 data UserEnv = UserEnv
   { bDatabaseUser :: R.Behavior (Db.Database User.User),
     --- Create
-    bUserCreateForm :: R.Behavior (Maybe UserCreateForm.User),
+    bUserCreateForm :: R.Behavior UserCreateForm.User,
     bUserCreate :: R.Behavior (Maybe User.User),
     --- Login
     bUserLoginForm :: R.Behavior (Maybe UserLoginForm.User),

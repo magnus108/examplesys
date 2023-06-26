@@ -8,6 +8,7 @@ module Piece.Db.User
   ( lookup,
     getRoles,
     create,
+    isConfig,
     edit,
     bListBox,
     showUser,
@@ -54,6 +55,11 @@ create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
 create form = do
   hala <- liftIO $ bsequence $ bmap (\(Product.Pair conf x) -> UserCreateForm.constructData x) form
   return $ construct @Maybe hala
+
+isConfig :: UserCreateForm.User -> Bool
+isConfig form = getAny $ bfoldMap (\(Product.Pair (Const (UserCreateForm.Config conf)) x) -> Any conf) form
+
+-- getAny $ construct @(Alt (Any)) gg
 
 edit :: MonadIO m => User.User -> UserEditForm.User -> m (Maybe User.User) -- fromForm
 edit user form = do

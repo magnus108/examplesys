@@ -13,10 +13,13 @@ where
 
 import qualified Control.Monad.Fix as Fix
 import qualified Control.Monad.IO.Unlift as UnliftIO
+import qualified Data.Functor.Product as Product
+import Data.Generic.HKD
 import qualified Data.Time.Clock as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Monad as Monad
+import Piece.App.UserEnv (UserEnv (bUserCreate, bUserCreateForm))
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
@@ -208,9 +211,9 @@ userLoginSetup :: MonadIO m => R.Event (Maybe Db.DatabaseKey) -> m (R.Behavior (
 userLoginSetup eUserLogin = do
   R.stepper Nothing $ Unsafe.head <$> R.unions [eUserLogin]
 
-userCreateFormSetup :: MonadIO m => R.Event UserCreateForm.User -> R.Event (Maybe User.User) -> m (R.Behavior (Maybe UserCreateForm.User))
+userCreateFormSetup :: (MonadIO m) => R.Event UserCreateForm.User -> R.Event (Maybe User.User) -> m (R.Behavior UserCreateForm.User)
 userCreateFormSetup eUserCreateForm eUserCreate = do
-  R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserCreateForm, Nothing <$ eUserCreate]
+  R.stepper (UserCreateForm.form "" "" False) $ Unsafe.head <$> R.unions [eUserCreateForm, UserCreateForm.form "" "" False <$ eUserCreate]
 
 userLoginFormSetup :: MonadIO m => R.Event UserLoginForm.User -> R.Event (Maybe Db.DatabaseKey) -> m (R.Behavior (Maybe UserLoginForm.User))
 userLoginFormSetup eUserLoginForm eUserLogin = do

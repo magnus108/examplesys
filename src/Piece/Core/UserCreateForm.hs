@@ -6,6 +6,7 @@
 module Piece.Core.UserCreateForm
   ( User,
     form,
+    form2,
     getFormData,
     constructData,
     toName,
@@ -53,6 +54,13 @@ form name password admin =
     (Product.Pair (Const (Config True)) (StringExpr name))
     (Product.Pair (Const (Config True)) (PasswordExpr password))
     (Product.Pair (Const (Config True)) (BoolExpr admin))
+
+form2 :: String -> String -> Bool -> User
+form2 name password admin =
+  build @User.User
+    (Product.Pair (Const (Config False)) (StringExpr name))
+    (Product.Pair (Const (Config False)) (PasswordExpr password))
+    (Product.Pair (Const (Config False)) (BoolExpr admin))
 
 toName :: User -> (Config, String)
 toName user =

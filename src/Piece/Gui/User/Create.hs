@@ -53,10 +53,12 @@ instance UI.Widget Create where
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
-  (userName, userNameView) <- mkInputter "Username" (maybe (UserCreateForm.Config True, "") (\y -> (UserCreateForm.toName y)) <$> UserEnv.bUserCreateForm userEnv)
-  (userPassword, userPasswordView) <- mkInputter "Password" (maybe (UserCreateForm.Config True, "") (\y -> (UserCreateForm.toPassword y)) <$> UserEnv.bUserCreateForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckboxer "Admin" (maybe (UserCreateForm.Config True, True) (\y -> (UserCreateForm.toRoles y)) <$> UserEnv.bUserCreateForm userEnv)
+  (userName, userNameView) <- mkInputter "Username" (UserCreateForm.toName <$> UserEnv.bUserCreateForm userEnv)
+  (userPassword, userPasswordView) <- mkInputter "Password" (UserCreateForm.toPassword <$> UserEnv.bUserCreateForm userEnv)
+  (userAdmin, userAdminView) <- mkCheckboxer "Admin" (UserCreateForm.toRoles <$> UserEnv.bUserCreateForm userEnv)
   (createBtn, createBtnView) <- mkButton "Opret"
+
+  return createBtn UI.# UI.sink UI.enabled (User.isConfig <$> UserEnv.bUserCreateForm userEnv)
 
   view <-
     mkContainer
@@ -88,8 +90,9 @@ setup env = mdo
 
   _ <- UI.onEvent eCreate $ \_ -> UI.liftIOLater $ Monad.runApp env $ UnliftIO.withRunInIO $ \run -> do
     userCreateForm <- R.currentValue bUserCreateForm
-    val <- run $ User.create userCreateForm -- Her sættter vi til true igen. aka behøver ikke default
-    hUser val
+    void $ forkIO $ run $ do
+      val <- User.create userCreateForm
+      liftIO $ hUser val
 
   let tUserCreate = UI.tidings (UserEnv.bUserCreate userEnv) eUser
   return Create {..}
