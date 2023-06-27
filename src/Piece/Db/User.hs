@@ -9,6 +9,7 @@ module Piece.Db.User
     getRoles,
     create,
     isConfig,
+    isConfig2,
     edit,
     bListBox,
     showUser,
@@ -57,6 +58,9 @@ create form = do
 
 isConfig :: UserCreateForm.User -> Bool
 isConfig form = getAny $ bfoldMap (\(Product.Pair (Const (UserCreateForm.Config conf)) x) -> Any conf) form
+
+isConfig2 :: UserEditForm.User -> Bool
+isConfig2 form = getAny $ bfoldMap (\(Product.Pair (Product.Pair (Const (UserCreateForm.Config conf)) _) x) -> Any conf) form
 
 edit :: MonadIO m => UserEditForm.User -> m (Maybe User.User)
 edit form = do
