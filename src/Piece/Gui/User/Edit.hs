@@ -69,13 +69,13 @@ setup :: Monad.AppEnv -> UI.UI Edit
 setup env = mdo
   ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers bSelection bDisplayUser (UserEnv.bFilterUserEdit userEnv)
 
-  (userName, userNameView) <- mkInputter "Username" (UserEditForm.toName <$> UserEnv.bUserEditForm userEnv)
-  (userPassword, userPasswordView) <- mkInputter "Password" (UserEditForm.toPassword <$> UserEnv.bUserEditForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckboxer "Admin" (UserEditForm.toRoles <$> UserEnv.bUserEditForm userEnv)
+  (userName, userNameView) <- mkInputter "Username" (UserCreateForm.toName <$> UserEnv.bUserEditForm userEnv)
+  (userPassword, userPasswordView) <- mkInputter "Password" (UserCreateForm.toPassword <$> UserEnv.bUserEditForm userEnv)
+  (userAdmin, userAdminView) <- mkCheckboxer "Admin" (UserCreateForm.toRoles <$> UserEnv.bUserEditForm userEnv)
 
   (editBtn, editBtnView) <- mkButton "Change"
 
-  return editBtn UI.# UI.sink UI.enabled (User.isConfig2 <$> UserEnv.bUserEditForm userEnv)
+  return editBtn UI.# UI.sink UI.enabled (User.isConfig <$> UserEnv.bUserEditForm userEnv)
 
   view <-
     mkContainer
@@ -111,11 +111,11 @@ setup env = mdo
   let tUserPassword = UI.userText userPassword
   let tUserAdmin = Checkbox.userCheck userAdmin
 
-  let tUserEditForm = UserEditForm.form2 <$> (R.tidings (UserEnv.bUserEditForm userEnv) R.never) <*> tUserName <*> tUserPassword <*> tUserAdmin
+  let tUserEditForm = UserEditForm.form2 <$> tUserName <*> tUserPassword <*> tUserAdmin
       bUserEditForm = UI.facts tUserEditForm
       eEdit = UI.click editBtn
 
-      tUserEditingForm = R.tidings bUserEditForm $ (bmap (\(Product.Pair conf x) -> Product.Pair (Product.Pair (Const (UserCreateForm.Config False)) Nothing) x) <$> bUserEditForm) UI.<@ eEdit
+      tUserEditingForm = R.tidings bUserEditForm $ (bmap (\(Product.Pair conf x) -> Product.Pair (Const (UserCreateForm.Config False)) x) <$> bUserEditForm) UI.<@ eEdit
 
   (eUser, hUser) <- liftIO $ R.newEvent
 
