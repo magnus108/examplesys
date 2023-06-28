@@ -15,6 +15,7 @@ module Piece.Db.User
   )
 where
 
+import Control.Applicative (Alternative (empty))
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
 import Data.Barbie
 import Data.Functor.Barbie
@@ -50,21 +51,17 @@ getRoles = do
   bLookup <- lookup
   return $ (maybe [] User.roles .) <$> bLookup
 
-create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
-create form = do
-  hala <- liftIO $ bsequence $ bmap (\(Product.Pair conf x) -> UserCreateForm.constructData x) form
-  return $ construct @Maybe hala
-
-isConfig :: UserCreateForm.User -> Bool
-isConfig form = getAny $ bfoldMap (\(Product.Pair (Const (UserCreateForm.Config conf)) x) -> Any conf) form
-
-edit :: MonadIO m => UserEditForm.User -> m (Maybe User.User)
-edit form = do
-  hala <- liftIO $ bsequence $ bmap (\(Product.Pair conf x) -> UserCreateForm.constructData x) form
-  return $ construct @Maybe hala
-
 bListBox :: (Env.WithUserEnv env m) => m (R.Behavior [Db.DatabaseKey])
 bListBox = do
   userEnv <- Has.grab @UserEnv.UserEnv
   let bDatabaseUser = UserEnv.bDatabaseUser userEnv
   return $ Db.keys <$> bDatabaseUser
+
+create :: MonadIO m => UserCreateForm.User -> m (Maybe User.User)
+create form = construct @Maybe <$> liftIO (bsequence $ bmap (\(Product.Pair conf x) -> UserCreateForm.constructData x) form)
+
+edit :: MonadIO m => UserEditForm.User -> m (Maybe User.User)
+edit form = construct @Maybe <$> liftIO (bsequence $ bmap (\(Product.Pair (Product.Pair conf x) y) -> UserEditForm.constructData y x) form)
+
+isConfig :: UserCreateForm.UserConfig -> Bool
+isConfig form = getAny $ bfoldMap (Any . UserCreateForm.enabled . getConst) form

@@ -222,6 +222,19 @@ userLoginFormSetup :: MonadIO m => R.Event UserLoginForm.User -> R.Event (Maybe 
 userLoginFormSetup eUserLoginForm eUserLogin = do
   R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
 
+userEditFormSetup :: (Env.WithUserEnv env m, MonadIO m, Fix.MonadFix m) => R.Event (Maybe Db.DatabaseKey) -> R.Event UserEditForm.User -> R.Event (Maybe (Db.DatabaseKey, User.User)) -> m (R.Behavior UserEditForm.User)
+userEditFormSetup eSelectUserEdit eUserEditForm eUserEditKeyValue = mdo
+  bLookup <- User.lookup
+  bUserEditForm <-
+    R.stepper UserEditForm.emptyForm $
+      Unsafe.head
+        <$> R.unions
+          [ eUserEditForm,
+            UserEditForm.emptyForm <$ eUserEditKeyValue,
+            UserEditForm.fromUser <$> bUserEditForm UI.<@> UI.filterJust ((=<<) <$> bLookup UI.<@> eSelectUserEdit)
+          ]
+  return bUserEditForm
+
 databaseUserSetup :: (Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database User.User)) => Config.Config -> R.Event User.User -> R.Event (Db.DatabaseKey, User.User) -> R.Event (Maybe Db.DatabaseKey) -> m (R.Behavior (Db.Database User.User))
 databaseUserSetup config eUserCreate eUserEdit eUserDelete = mdo
   databaseUser <- Read.read (Config.datastoreUser config)
@@ -317,7 +330,7 @@ userEnvSetup ::
   R.Event UserEditForm.User ->
   R.Event (Maybe (Db.DatabaseKey, User.User)) ->
   m UserEnv.UserEnv
-userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser eUserDelete eSelectUserEdit eFilterUserEdit eUserEditForm eUserEditKeyValue = do
+userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime eSelectUser eFilterUser eUserDelete eSelectUserEdit eFilterUserEdit eUserEditForm eUserEditKeyValue = mdo
   bUserCreateForm <- userCreateFormSetup eUserCreateForm eUserCreate
   bUserCreate <- userCreateSetup eUserCreate
   bUserLoginForm <- userLoginFormSetup eUserLoginForm eUserLogin
@@ -332,15 +345,7 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
   bFilterUserEdit <- R.stepper "" $ Unsafe.head <$> R.unions [eFilterUserEdit]
   bUserEditKeyValue <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserEditKeyValue]
 
-  bLookup <- User.lookup
-  bUserEditForm <-
-    R.stepper (UserEditForm.form "" "" False) $
-      Unsafe.head
-        <$> R.unions
-          [ eUserEditForm,
-            UserEditForm.form "" "" False <$ eUserEditKeyValue,
-            UserEditForm.fromUser <$> UI.filterJust ((=<<) <$> bLookup UI.<@> eSelectUserEdit)
-          ]
+  bUserEditForm <- userEditFormSetup eSelectUserEdit eUserEditForm eUserEditKeyValue
 
   return $
     UserEnv.UserEnv

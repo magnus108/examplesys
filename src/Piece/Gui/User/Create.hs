@@ -17,6 +17,7 @@ where
 import Control.Concurrent
 import qualified Control.Concurrent.Async as Async
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import Data.Barbie
 import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
 import Data.Generic.HKD (field)
@@ -58,7 +59,7 @@ setup env = mdo
   (userAdmin, userAdminView) <- mkCheckboxer "Admin" (UserCreateForm.toRoles <$> UserEnv.bUserCreateForm userEnv)
   (createBtn, createBtnView) <- mkButton "Opret"
 
-  return createBtn UI.# UI.sink UI.enabled (User.isConfig <$> UserEnv.bUserCreateForm userEnv)
+  return createBtn UI.# UI.sink UI.enabled (User.isConfig . fst . bunzip <$> UserEnv.bUserCreateForm userEnv)
 
   view <-
     mkContainer

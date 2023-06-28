@@ -23,7 +23,9 @@ where
 
 import Control.Concurrent (forkIO)
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
+import qualified Control.Lens as L
 import Data.Aeson.KeyMap (lookup)
+import Data.Barbie
 import Data.Functor.Product
 import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
@@ -48,7 +50,7 @@ import qualified Piece.Db.Token as Token
 import qualified Piece.Db.User as User
 import qualified Piece.Gui.Checkbox.Checkbox as Checkbox
 import qualified Piece.Gui.User.Behavior as Behavior
-import Piece.Gui.User.List (mkCheckboxer, mkInputter)
+import Piece.Gui.User.List (mkCheckboxer, mkCheckboxer2, mkInputter, mkInputter2)
 import qualified Reactive.Threepenny as R
 import qualified Relude.Unsafe as Unsafe
 import qualified UnliftIO
@@ -69,13 +71,14 @@ setup :: Monad.AppEnv -> UI.UI Edit
 setup env = mdo
   ((filterUser, filterUserView), (listBoxUser, listBoxUserView)) <- mkSearchEntry bOtherUsers bSelection bDisplayUser (UserEnv.bFilterUserEdit userEnv)
 
-  (userName, userNameView) <- mkInputter "Username" (UserCreateForm.toName <$> UserEnv.bUserEditForm userEnv)
-  (userPassword, userPasswordView) <- mkInputter "Password" (UserCreateForm.toPassword <$> UserEnv.bUserEditForm userEnv)
-  (userAdmin, userAdminView) <- mkCheckboxer "Admin" (UserCreateForm.toRoles <$> UserEnv.bUserEditForm userEnv)
+  let userEnvEditForm = fst . bunzip <$> UserEnv.bUserEditForm userEnv
 
+  (userName, userNameView) <- mkInputter2 "Username" (L.view (field @"name") <$> userEnvEditForm)
+  (userPassword, userPasswordView) <- mkInputter2 "Password" (L.view (field @"password") <$> userEnvEditForm)
+  (userAdmin, userAdminView) <- mkCheckboxer2 "Admin" (L.view (field @"roles") <$> userEnvEditForm)
   (editBtn, editBtnView) <- mkButton "Change"
 
-  return editBtn UI.# UI.sink UI.enabled (User.isConfig <$> UserEnv.bUserEditForm userEnv)
+  return editBtn UI.# UI.sink UI.enabled (User.isConfig . fst . bunzip <$> userEnvEditForm)
 
   view <-
     mkContainer
@@ -95,27 +98,26 @@ setup env = mdo
       ]
 
   userEnv <- liftIO $ Monad.runApp env $ Has.grab @UserEnv.UserEnv
-  let bSelection = UserEnv.bSelectionUserEdit userEnv
-  let bFilterUser = isPrefixOf <$> UserEnv.bFilterUserEdit userEnv
+
   bDisplayUser <- liftIO $ Monad.runApp env Behavior.displayUser
   bOtherUsers <- liftIO $ Monad.runApp env (Token.bOtherUsersFilter bFilterUser)
 
-  let tUserSelection = UI.userSelection listBoxUser
-      bUserSelection = UI.facts tUserSelection
+  let bSelection = UserEnv.bSelectionUserEdit userEnv
+      bFilterUser = isPrefixOf <$> UserEnv.bFilterUserEdit userEnv
 
   let tUserFilter = UI.userText filterUser
-
-  bUserLookup <- liftIO $ Monad.runApp env $ User.lookup
+      tUserSelection = UI.userSelection listBoxUser
+      bUserSelection = UI.facts tUserSelection
 
   let tUserName = UI.userText userName
-  let tUserPassword = UI.userText userPassword
-  let tUserAdmin = Checkbox.userCheck userAdmin
+      tUserPassword = UI.userText userPassword
+      tUserAdmin = Checkbox.userCheck userAdmin
 
-  let tUserEditForm = UserEditForm.form2 <$> tUserName <*> tUserPassword <*> tUserAdmin
+  let tUserEditForm = -- DETTE SKAL SKRIVES SOM SÆTTERS bmap (\(Product.Pair (Product.Pair conf x) y) -> Product.Pair (Product.Pair (Const (UserCreateForm.Config True)) x) y) <$> (UserEditForm.form <$> tUserName <*> tUserPassword <*> tUserAdmin)
       bUserEditForm = UI.facts tUserEditForm
       eEdit = UI.click editBtn
 
-      tUserEditingForm = R.tidings bUserEditForm $ (bmap (\(Product.Pair conf x) -> Product.Pair (Const (UserCreateForm.Config False)) x) <$> bUserEditForm) UI.<@ eEdit
+      tUserEditingForm = R.tidings bUserEditForm $ (bmap (\(Product.Pair (Product.Pair conf x) y) -> Product.Pair (Product.Pair (Const (UserCreateForm.Config False)) x) y) <$> bUserEditForm) UI.<@ eEdit
 
   (eUser, hUser) <- liftIO $ R.newEvent
 

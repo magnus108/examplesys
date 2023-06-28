@@ -14,6 +14,8 @@ module Piece.Core.UserCreateForm
     toPassword,
     toRoles,
     Config (..),
+    UserForm,
+    UserConfig (..),
     FormDataExpr (..),
     FormData (..),
   )
@@ -25,6 +27,10 @@ import Data.Generic.HKD
 import Data.Text hiding (elem)
 import qualified Piece.CakeSlayer.Password as Password
 import qualified Piece.Core.User as User
+
+type UserConfig = HKD User.User (Const Config)
+
+type UserForm = HKD User.User FormDataExpr
 
 type User = HKD User.User (Product.Product (Const Config) FormDataExpr)
 

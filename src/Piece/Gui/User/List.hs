@@ -1,4 +1,5 @@
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Piece.Gui.User.List
   ( setup,
@@ -9,9 +10,11 @@ module Piece.Gui.User.List
     mkSearch,
     mkInput,
     mkInputter,
+    mkInputter2,
     mkContainer,
     mkCheckbox,
     mkCheckboxer,
+    mkCheckboxer2,
     mkButton,
   )
 where
@@ -27,6 +30,7 @@ import qualified Piece.App.Monad as Monad
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Core.User as User
+import qualified Piece.Core.UserCreateForm as Form
 import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Db.Db as Db
 import qualified Piece.Db.Token as Token
@@ -110,6 +114,28 @@ mkInputter label bFilterItem = do
               UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input" UI.# UI.sink UI.enabled ((\(UserCreateForm.Config a, b) -> a) <$> bFilterItem)]
             ]
   return (filterItem, view)
+
+-- mkInputter2 :: _ -- String -> R.Behavior (Product.Product (Const UserCreateForm.Config) UserCreateForm.FormDataExpr a) -> UI.UI (UI.TextEntry, UI.Element)
+mkInputter2 label bFilterItem = do
+  filterItem <- UI.entry ((\(Product.Pair a b) -> Form.getFormData b) <$> bFilterItem)
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element filterItem UI.#. "input" UI.# UI.sink UI.enabled ((\(Product.Pair a b) -> UserCreateForm.enabled (getConst a)) <$> bFilterItem)]
+            ]
+  return (filterItem, view)
+
+mkCheckboxer2 :: String -> R.Behavior (Product.Product (Const UserCreateForm.Config) UserCreateForm.FormDataExpr [Int]) -> UI.UI (Checkbox.CheckboxEntry, UI.Element)
+mkCheckboxer2 label bCheck = do
+  elem <- Checkbox.entry ((\(Product.Pair a b) -> Form.getFormData b) <$> bCheck)
+  view <-
+    UI.div
+      UI.#. "field"
+      UI.#+ [ UI.label UI.#. "label" UI.#+ [UI.string label],
+              UI.div UI.#. "control" UI.#+ [UI.element elem UI.#. "checkbox" UI.# UI.sink UI.enabled ((\(Product.Pair a b) -> UserCreateForm.enabled (getConst a)) <$> bCheck)]
+            ]
+  return (elem, view)
 
 mkInput :: String -> UI.Behavior String -> UI.UI (UI.TextEntry, UI.Element)
 mkInput label bFilterItem = do
