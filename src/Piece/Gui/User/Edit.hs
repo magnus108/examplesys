@@ -113,7 +113,8 @@ setup env = mdo
       tUserPassword = UI.userText userPassword
       tUserAdmin = Checkbox.userCheck userAdmin
 
-  let tUserEditForm = -- DETTE SKAL SKRIVES SOM SÆTTERS bmap (\(Product.Pair (Product.Pair conf x) y) -> Product.Pair (Product.Pair (Const (UserCreateForm.Config True)) x) y) <$> (UserEditForm.form <$> tUserName <*> tUserPassword <*> tUserAdmin)
+  let tUserEditForm = bzipWith UserEditForm.lola <$> (UI.tidings (UserEnv.bUserEditForm userEnv) UI.never) <*> (UserEditForm.form <$> tUserName <*> tUserPassword <*> tUserAdmin)
+      -- DETTE SKAL SKRIVES SOM SÆTTERS bmap (\(Product.Pair (Product.Pair conf x) y) -> Product.Pair (Product.Pair (Const (UserCreateForm.Config True)) x) y) <$> (UserEditForm.form <$> tUserName <*> tUserPassword <*> tUserAdmin)
       bUserEditForm = UI.facts tUserEditForm
       eEdit = UI.click editBtn
 

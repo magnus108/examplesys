@@ -231,7 +231,7 @@ userEditFormSetup eSelectUserEdit eUserEditForm eUserEditKeyValue = mdo
         <$> R.unions
           [ eUserEditForm,
             UserEditForm.emptyForm <$ eUserEditKeyValue,
-            UserEditForm.fromUser <$> bUserEditForm UI.<@> UI.filterJust ((=<<) <$> bLookup UI.<@> eSelectUserEdit)
+            (\x y -> UserEditForm.fromUser x (deconstruct @Identity y)) <$> bUserEditForm UI.<@> UI.filterJust ((=<<) <$> bLookup UI.<@> eSelectUserEdit)
           ]
   return bUserEditForm
 

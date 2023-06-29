@@ -5,18 +5,17 @@
 
 module Piece.Core.UserEditForm
   ( User,
+    lola,
     form,
     emptyForm,
     fromUser,
     constructData,
-    toName,
-    toPassword,
-    toRoles,
   )
 where
 
 import Control.Lens (Const (..), Identity, anyOf, (&), (.~), (^.))
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Barbie
 import Data.Functor.Product (Product)
 import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
@@ -39,30 +38,22 @@ form name password admin =
       (Form.PasswordExpr password)
       (Form.BoolExpr admin)
 
-toName :: User -> (Form.Config, String)
-toName user =
-  let (Product.Pair (Product.Pair conf formName) fallback) = user ^. field @"name"
-      formData = Form.getFormData formName
-   in (getConst conf, formData)
+fromUser :: User -> HKD User.User Identity -> User
+fromUser user fallback = bzipWith lol user fallback
 
-toPassword :: User -> (Form.Config, String)
-toPassword user =
-  let (Product.Pair (Product.Pair conf formName) fallback) = user ^. field @"password"
-      formData = Form.getFormData formName
-   in (getConst conf, formData)
+lol :: Product.Product (Product.Product (Const Form.Config) Form.FormDataExpr) Maybe a -> Identity a -> Product.Product (Product.Product (Const Form.Config) Form.FormDataExpr) Maybe a
+lol (Product.Pair (Product.Pair config x) _) y = Product.Pair (Product.Pair (Const (Form.Config True)) (lol2 x y)) (Just $ runIdentity y)
 
-toRoles :: User -> (Form.Config, Bool)
-toRoles user =
-  let (Product.Pair (Product.Pair conf formName) fallback) = user ^. field @"roles"
-      formData = Form.getFormData formName
-   in (getConst conf, formData)
+lol2 :: Form.FormDataExpr a -> Identity a -> Form.FormDataExpr a
+lol2 (Form.StringExpr param) x = Form.StringExpr (runIdentity x)
+lol2 (Form.PasswordExpr param) x = Form.PasswordExpr ""
+lol2 (Form.BoolExpr param) x = Form.BoolExpr (3 `elem` runIdentity x)
 
-fromUser :: User -> User.User -> User
-fromUser user fallback =
-  build @User.User
-    (Product.Pair (Product.Pair (Const (Form.Config True)) (Form.StringExpr (User.name fallback))) (Just $ User.name fallback))
-    (Product.Pair (Product.Pair (Const (Form.Config True)) (Form.PasswordExpr "")) (Just $ User.password fallback))
-    (Product.Pair (Product.Pair (Const (Form.Config True)) (Form.BoolExpr (3 `elem` (User.roles fallback)))) (Just $ User.roles fallback))
+lola ::
+  Product.Product (Product.Product (Const Form.Config) Form.FormDataExpr) Maybe a ->
+  Product.Product (Product.Product (Const Form.Config) Form.FormDataExpr) Maybe a ->
+  Product.Product (Product.Product (Const Form.Config) Form.FormDataExpr) Maybe a
+lola (Product.Pair (Product.Pair config x) p) (Product.Pair (Product.Pair _ y) _) = Product.Pair (Product.Pair config y) p
 
 constructData :: Maybe a -> Form.FormDataExpr a -> Compose IO Maybe a
 constructData x (Form.StringExpr param) = if null param then Compose $ return x else Compose $ return $ Just param
