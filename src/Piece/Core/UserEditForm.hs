@@ -58,4 +58,4 @@ lola (Product.Pair (Product.Pair config x) p) (Product.Pair (Product.Pair _ y) _
 constructData :: Maybe a -> Form.FormDataExpr a -> Compose IO Maybe a
 constructData x (Form.StringExpr param) = if null param then Compose $ return x else Compose $ return $ Just param
 constructData x (Form.PasswordExpr param) = if null param then Compose $ return x else Compose $ Password.mkPasswordHash . Password.PasswordPlainText . pack $ param
-constructData x (Form.BoolExpr param) = Compose $ return $ Just [] -- \$ if param then ordNub . ((:) 3) <$> x else filter (/= 3) <$> x
+constructData x (Form.BoolExpr param) = Compose $ return $ if param then ordNub . ((:) 3) <$> x else filter (/= 3) <$> x
