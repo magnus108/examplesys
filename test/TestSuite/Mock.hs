@@ -82,7 +82,7 @@ mockEnv = mdo
   -- User
   (eUser, hUser) <- liftIO $ R.newEvent
   (eUserSelection, hUserSelection) <- liftIO $ R.newEvent
-  userEnv <- userEnvSetup config R.never eUser R.never eUserLogin R.never (unUserSelection <$> eUserSelection) R.never R.never R.never R.never R.never
+  userEnv <- userEnvSetup config R.never eUser R.never eUserLogin R.never (unUserSelection <$> eUserSelection) R.never R.never R.never R.never R.never R.never
 
   -- Role
   (eRole, hRole) <- liftIO $ R.newEvent

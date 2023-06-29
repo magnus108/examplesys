@@ -32,11 +32,11 @@ tests =
           "bListBox"
           [ runMockApp $ do
               hUser <- Has.grab @(R.Handler (Maybe User.User))
-              user <- User.create $ UserCreateForm.user "user1" (Password.PasswordPlainText (pack "pass1")) False
+              user <- User.create $ UserCreateForm.form "user1" "pass1" False
               liftIO $ hUser user
-              user <- User.create $ UserCreateForm.user "user2" (Password.PasswordPlainText (pack "pass2")) False
+              user <- User.create $ UserCreateForm.form "user2" "pass2" False
               liftIO $ hUser user
-              user <- User.create $ UserCreateForm.user "user3" (Password.PasswordPlainText (pack "pass3")) False
+              user <- User.create $ UserCreateForm.form "user3" "pass3" False
               liftIO $ hUser user
               hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
               liftIO $ hUserLogin (Just 0)

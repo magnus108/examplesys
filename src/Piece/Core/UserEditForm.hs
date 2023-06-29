@@ -47,7 +47,7 @@ lol (Product.Pair (Product.Pair config x) _) y = Product.Pair (Product.Pair (Con
 lol2 :: Form.FormDataExpr a -> Identity a -> Form.FormDataExpr a
 lol2 (Form.StringExpr param) x = Form.StringExpr (runIdentity x)
 lol2 (Form.PasswordExpr param) x = Form.PasswordExpr ""
-lol2 (Form.BoolExpr param) x = Form.BoolExpr (3 `elem` runIdentity x)
+lol2 (Form.BoolExpr param) x = Form.BoolExpr (2 `elem` runIdentity x)
 
 lola ::
   Product.Product (Product.Product (Const Form.Config) Form.FormDataExpr) Maybe a ->
@@ -58,4 +58,4 @@ lola (Product.Pair (Product.Pair config x) p) (Product.Pair (Product.Pair _ y) _
 constructData :: Maybe a -> Form.FormDataExpr a -> Compose IO Maybe a
 constructData x (Form.StringExpr param) = if null param then Compose $ return x else Compose $ return $ Just param
 constructData x (Form.PasswordExpr param) = if null param then Compose $ return x else Compose $ Password.mkPasswordHash . Password.PasswordPlainText . pack $ param
-constructData x (Form.BoolExpr param) = Compose $ return $ if param then ordNub . ((:) 3) <$> x else filter (/= 3) <$> x
+constructData x (Form.BoolExpr param) = Compose $ return $ if param then ordNub . ((:) 2) <$> x else filter (/= 2) <$> x

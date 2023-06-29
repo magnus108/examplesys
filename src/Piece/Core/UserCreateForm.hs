@@ -54,7 +54,7 @@ getFormData (BoolExpr param) = param
 constructData :: FormDataExpr a -> Compose IO Maybe a
 constructData (StringExpr param) = Compose $ return $ Just param
 constructData (PasswordExpr param) = Compose $ Password.mkPasswordHash . Password.PasswordPlainText . pack $ param
-constructData (BoolExpr param) = Compose $ return $ Just $ if param then [3] else []
+constructData (BoolExpr param) = Compose $ return $ Just $ if param then [1] else []
 
 form :: String -> String -> Bool -> User
 form name password admin =

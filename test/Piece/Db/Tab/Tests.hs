@@ -86,7 +86,7 @@ tests =
               let value = []
               liftIO $ value @=? currentTabs,
             runMockApp $ do
-              user <- User.create $ UserCreateForm.user "lol" (Password.PasswordPlainText (pack "lol")) True
+              user <- User.create $ UserCreateForm.form "lol" "lol" True
               hUser <- Has.grab @(R.Handler (Maybe User.User))
               liftIO $ hUser user
               hUserLogin <- Has.grab @(R.Handler (Maybe Db.DatabaseKey))
