@@ -23,6 +23,7 @@ import Piece.App.UserEnv (UserEnv (bUserCreate, bUserCreateForm))
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
+import qualified Piece.Core.Item as Item
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -39,6 +40,7 @@ import qualified Piece.Db.User as User
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
+import qualified Piece.Gui.Item.List as ItemList
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.TabButton as TabButton
 import qualified Piece.Gui.Tab.TabView as TabView
@@ -69,12 +71,15 @@ main port = do
       userList <- UserList.setup env
       userEdit <- UserEdit.setup env
 
+      itemList <- ItemList.setup env
+
       let tabViews =
             [ UI.getElement loanCreate,
               UI.getElement userCreate,
               UI.getElement userLogin,
               UI.getElement userList,
-              UI.getElement userEdit
+              UI.getElement userEdit,
+              UI.getElement itemList
             ]
 
       tabs <- TabButton.setup env
@@ -116,6 +121,16 @@ main port = do
         let tUserDelete = UserList.tUserDelete userList
             eUserDelete = R.rumors tUserDelete
 
+        -- ITEM
+        let tItemFilter = ItemList.tItemFilter itemList
+            eItemFilter = R.rumors tItemFilter
+
+        let tItemSelect = ItemList.tItemSelect itemList
+            eItemSelect = R.rumors tItemSelect
+
+        let tItemDelete = ItemList.tItemDelete itemList
+            eItemDelete = R.rumors tItemDelete
+
         ---- EDIT
         let tUserFilterEdit = UserEdit.tUserFilter userEdit
             eUserFilterEdit = R.rumors tUserFilterEdit
@@ -140,6 +155,8 @@ main port = do
         privilegeEnv <- privilegeEnvSetup config R.never
         tabEnv <- tabEnvSetup config R.never eSelectionTab
 
+        itemEnv <- itemEnvSetup config eItemFilter eItemSelect eItemDelete
+
         let env =
               Env.Env
                 { tabEnv = tabEnv,
@@ -148,7 +165,8 @@ main port = do
                   roleEnv = roleEnv,
                   userEnv = userEnv,
                   tokenEnv = tokenEnv,
-                  privilegeEnv = privilegeEnv
+                  privilegeEnv = privilegeEnv,
+                  itemEnv = itemEnv
                 }
 
         return env
@@ -159,9 +177,11 @@ main port = do
 listen ::
   ( MonadReader env m,
     Has.Has Env.LoanEnv env,
+    Has.Has Env.ItemEnv env,
     Has.Has UserEnv.UserEnv env,
     Has.Has Env.TabEnv env,
     Has.Has Env.TokenEnv env,
+    Write.MonadWrite m (Db.Database Item.Item),
     Write.MonadWrite m (Db.Database Token.Token),
     Write.MonadWrite m (Db.Database Tab.Tab),
     Write.MonadWrite m (Db.Database Loan.Loan),
@@ -179,11 +199,16 @@ listen config = do
   let bDatabaseTab = Env.bDatabaseTab tabEnv
   loanEnv <- Has.grab @Env.LoanEnv
   let bDatabaseLoan = Env.bDatabaseLoan loanEnv
+
+  itemEnv <- Has.grab @Env.ItemEnv
+  let bDatabaseItem = Env.bDatabaseItem itemEnv
+
   UnliftIO.withRunInIO $ \run -> do
     _ <- UI.liftIO $ R.onChange bDatabaseLoan $ \s -> run $ void $ Write.write (Config.datastoreLoan config) s
     _ <- UI.liftIO $ R.onChange bDatabaseTab $ \s -> run $ void $ Write.write (Config.datastoreTab config) s
     _ <- UI.liftIO $ R.onChange bDatabaseUser $ \s -> run $ void $ Write.write (Config.datastoreUser config) s
     _ <- UI.liftIO $ R.onChange bDatabaseToken $ \s -> run $ void $ Write.write (Config.datastoreToken config) s
+    _ <- UI.liftIO $ R.onChange bDatabaseItem $ \s -> run $ void $ Write.write (Config.datastoreItem config) s
     return ()
 
 timeEnvSetup :: (Time.MonadTime m, MonadIO m) => Config.Config -> R.Event Time.Time -> m (Env.TimeEnv)
@@ -386,9 +411,24 @@ loanEnvSetup config loanCreate = do
         bSelectionItem = bSelectionItem,
         bSelectionLoan = bSelectionLoan,
         bFilterUser = bFilterUser,
-        bFilterItem = bFilterItem,
+        _bFilterItem = bFilterItem,
         bFilterLoan = bFilterLoan,
         bModalState = bModalState
+      }
+
+itemEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Item.Item)) => Config.Config -> R.Event String -> R.Event (Maybe Db.DatabaseKey) -> R.Event (Maybe Db.DatabaseKey) -> m Env.ItemEnv
+itemEnvSetup config eItemFilter eItemSelect eItemDelete = do
+  databaseItem <- Read.read (Config.datastoreItem config)
+
+  bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions []
+  bSelectItem <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect]
+  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
+
+  return $
+    Env.ItemEnv
+      { bDatabaseItem = bDatabaseItem,
+        bSelectItem = bSelectItem,
+        bFilterItem = bFilterItem
       }
 
 roleEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Role.Role)) => Config.Config -> R.Event (Db.Database Role.Role) -> m Env.RoleEnv

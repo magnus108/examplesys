@@ -3,11 +3,13 @@
 module Piece.App.Env
   ( Env (..),
     LoanEnv (..),
+    ItemEnv (..),
     TabEnv (..),
     TokenEnv (..),
     TimeEnv (..),
     RoleEnv (..),
     PrivilegeEnv (..),
+    WithItemEnv,
     WithLoanEnv,
     WithTabEnv,
     WithTimeEnv,
@@ -21,6 +23,7 @@ where
 import qualified Data.Time.Clock as Time
 import qualified Piece.App.UserEnv as UserEnv
 import Piece.CakeSlayer.Has (Field (..), Has)
+import qualified Piece.Core.Item as Item
 import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -32,6 +35,7 @@ import qualified Reactive.Threepenny as R
 
 data Env (m :: Type -> Type) = Env
   { loanEnv :: LoanEnv,
+    itemEnv :: ItemEnv,
     tabEnv :: TabEnv,
     timeEnv :: TimeEnv,
     userEnv :: UserEnv.UserEnv,
@@ -39,6 +43,7 @@ data Env (m :: Type -> Type) = Env
     tokenEnv :: TokenEnv,
     privilegeEnv :: PrivilegeEnv
   }
+  deriving (Has ItemEnv) via Field "itemEnv" (Env m)
   deriving (Has LoanEnv) via Field "loanEnv" (Env m)
   deriving (Has TabEnv) via Field "tabEnv" (Env m)
   deriving (Has TokenEnv) via Field "tokenEnv" (Env m)
@@ -48,6 +53,8 @@ data Env (m :: Type -> Type) = Env
   deriving (Has PrivilegeEnv) via Field "privilegeEnv" (Env m)
 
 type WithLoanEnv env m = (MonadReader env m, Has LoanEnv env)
+
+type WithItemEnv env m = (MonadReader env m, Has ItemEnv env)
 
 type WithTabEnv env m = (MonadReader env m, Has TabEnv env)
 
@@ -90,7 +97,13 @@ data LoanEnv = LoanEnv
     bSelectionItem :: R.Behavior (Maybe DatabaseKey),
     bSelectionLoan :: R.Behavior (Maybe DatabaseKey),
     bFilterUser :: R.Behavior String,
-    bFilterItem :: R.Behavior String,
+    _bFilterItem :: R.Behavior String,
     bFilterLoan :: R.Behavior String,
     bModalState :: R.Behavior Bool
+  }
+
+data ItemEnv = ItemEnv
+  { bDatabaseItem :: R.Behavior (Database Item.Item),
+    bSelectItem :: R.Behavior (Maybe DatabaseKey),
+    bFilterItem :: R.Behavior String
   }

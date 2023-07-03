@@ -35,6 +35,7 @@ common common-all
         Piece.Gui.Tab.Behavior
         Piece.Gui.Checkbox.Checkbox
         Piece.Gui.Time.Time
+        Piece.Gui.Elements.Elements
         Piece.Db.Tab
         Piece.Db.Role
         Piece.Db.Token
@@ -71,12 +72,15 @@ common common-all
         Piece.Db.Loan
         Piece.Db.Privilege
         Piece.Db.User
+        Piece.Db.Item
         Piece.Time.Time
         Piece.Gui.Loan.Create
         Piece.Gui.Loan.Behavior
         Piece.Gui.User.Create
         Piece.Gui.User.Behavior
         Piece.Gui.User.List
+        Piece.Gui.Item.Behavior
+        Piece.Gui.Item.List
         Piece.Gui.User.Edit
 
     mixins:
