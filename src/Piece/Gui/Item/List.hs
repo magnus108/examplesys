@@ -4,10 +4,11 @@ module Piece.Gui.Item.List
   ( setup,
     tItemSelect,
     tItemFilter,
-    tItemDelete,
+    eItemDelete,
   )
 where
 
+import qualified Data.Generic.HKD as HKD
 import qualified Graphics.UI.Threepenny.Attributes as UI
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Graphics.UI.Threepenny.Elements as UI
@@ -16,6 +17,7 @@ import qualified Graphics.UI.Threepenny.Widgets as UI
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
+import qualified Piece.Core.Item as Item
 import qualified Piece.Db.Db as Db
 import qualified Piece.Gui.Elements.Elements as Elements
 import qualified Piece.Gui.Item.Behavior as Behavior
@@ -25,7 +27,7 @@ data List = List
   { view :: UI.Element,
     tItemSelect :: R.Tidings (Maybe Db.DatabaseKey),
     tItemFilter :: R.Tidings String,
-    tItemDelete :: R.Tidings (Maybe Db.DatabaseKey)
+    eItemDelete :: R.Event (Db.DatabaseKey, Item.Item)
   }
 
 instance UI.Widget List where
@@ -44,7 +46,7 @@ setup env = mdo
 
   (deleteBtn, deleteBtnView) <- Elements.mkButton "Slet"
 
-  -- _ <- UI.element deleteBtn UI.# UI.sink UI.enabled bAvailable
+  _ <- UI.element deleteBtn UI.# UI.sink UI.enabled (isJust . HKD.construct <$> Env.bItemDeleteForm itemEnv)
 
   view <-
     Elements.mkContainer
@@ -56,8 +58,10 @@ setup env = mdo
       ]
 
   let tItemSelect = UI.userSelection listBoxItem
+      bItemSelect = R.facts tItemSelect
       tItemFilter = UI.userText filterItem
       eDelete = UI.click deleteBtn
 
-  let tItemDelete = undefined -- UI.tidings (Env.bItemDelete userEnv) (bUserSelect UI.<@ eDelete)
+  let eItemDelete = R.filterJust $ liftA2 (,) <$> bItemSelect UI.<@> (HKD.construct <$> ((Env.bItemDeleteForm itemEnv) UI.<@ eDelete))
+
   return List {..}

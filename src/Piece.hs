@@ -35,6 +35,7 @@ import qualified Piece.Core.UserCreateForm as UserCreateForm
 import qualified Piece.Core.UserEditForm as UserEditForm
 import qualified Piece.Core.UserLoginForm as UserLoginForm
 import qualified Piece.Db.Db as Db
+import qualified Piece.Db.Item as Item
 import qualified Piece.Db.Token as Token
 import qualified Piece.Db.User as User
 import qualified Piece.Effects.Read as Read
@@ -128,8 +129,7 @@ main port = do
         let tItemSelect = ItemList.tItemSelect itemList
             eItemSelect = R.rumors tItemSelect
 
-        let tItemDelete = ItemList.tItemDelete itemList
-            eItemDelete = R.rumors tItemDelete
+        let eItemDelete = ItemList.eItemDelete itemList
 
         ---- EDIT
         let tUserFilterEdit = UserEdit.tUserFilter userEdit
@@ -416,19 +416,31 @@ loanEnvSetup config loanCreate = do
         bModalState = bModalState
       }
 
-itemEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Item.Item)) => Config.Config -> R.Event String -> R.Event (Maybe Db.DatabaseKey) -> R.Event (Maybe Db.DatabaseKey) -> m Env.ItemEnv
-itemEnvSetup config eItemFilter eItemSelect eItemDelete = do
+itemEnvSetup :: (Env.WithItemEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Item.Item)) => Config.Config -> R.Event String -> R.Event (Maybe Db.DatabaseKey) -> R.Event (Db.DatabaseKey, Item.Item) -> m Env.ItemEnv
+itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
   databaseItem <- Read.read (Config.datastoreItem config)
 
-  bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions []
-  bSelectItem <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect]
   bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
+
+  bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions [flip Db.delete <$> bDatabaseItem UI.<@> (fst <$> eItemDelete)]
+
+  bSelectItem <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect, Nothing <$ eItemDelete] -- måske slet denne?
+  bLookup <- Item.lookup
+
+  bItemDeleteForm <-
+    R.stepper mempty $
+      Unsafe.head
+        <$> R.unions
+          [ deconstruct <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemSelect),
+            mempty <$ eItemDelete
+          ]
 
   return $
     Env.ItemEnv
       { bDatabaseItem = bDatabaseItem,
         bSelectItem = bSelectItem,
-        bFilterItem = bFilterItem
+        bFilterItem = bFilterItem,
+        bItemDeleteForm = bItemDeleteForm
       }
 
 roleEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Role.Role)) => Config.Config -> R.Event (Db.Database Role.Role) -> m Env.RoleEnv

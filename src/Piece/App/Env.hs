@@ -24,6 +24,7 @@ import qualified Data.Time.Clock as Time
 import qualified Piece.App.UserEnv as UserEnv
 import Piece.CakeSlayer.Has (Field (..), Has)
 import qualified Piece.Core.Item as Item
+import qualified Piece.Core.ItemDeleteForm as ItemDeleteForm
 import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -105,5 +106,6 @@ data LoanEnv = LoanEnv
 data ItemEnv = ItemEnv
   { bDatabaseItem :: R.Behavior (Database Item.Item),
     bSelectItem :: R.Behavior (Maybe DatabaseKey),
-    bFilterItem :: R.Behavior String
+    bFilterItem :: R.Behavior String,
+    bItemDeleteForm :: R.Behavior ItemDeleteForm.Item
   }

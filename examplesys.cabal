@@ -62,6 +62,7 @@ common common-all
         Piece.Core.Loan
         Piece.Core.User
         Piece.Gui.User.Login
+        Piece.Core.ItemDeleteForm
         Piece.Core.UserCreateForm
         Piece.Core.UserEditForm
         Piece.Core.UserLoginForm
