@@ -420,11 +420,19 @@ itemEnvSetup :: (Env.WithItemEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRea
 itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
   databaseItem <- Read.read (Config.datastoreItem config)
 
-  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
-
   bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions [flip Db.delete <$> bDatabaseItem UI.<@> (fst <$> eItemDelete)]
 
-  bSelectItem <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect, Nothing <$ eItemDelete] -- måske slet denne?
+  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter, "" <$ eItemDelete]
+
+  bSelectItem <-
+    R.stepper Nothing $
+      Unsafe.head
+        <$> R.unions
+          [ eItemSelect,
+            Nothing <$ eItemDelete,
+            Nothing <$ eItemFilter
+          ]
+
   bLookup <- Item.lookup
 
   bItemDeleteForm <-
@@ -432,7 +440,8 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
       Unsafe.head
         <$> R.unions
           [ deconstruct <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemSelect),
-            mempty <$ eItemDelete
+            mempty <$ eItemDelete,
+            mempty <$ eItemFilter
           ]
 
   return $
