@@ -474,8 +474,8 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
           ]
 
   bItemCreateForm <-
-    R.stepper (HKD.build @Item.Item (Form.StringExpr "")) $
-      Unsafe.head <$> R.unions [eItemCreateForm, HKD.build @Item.Item (Form.StringExpr "") <$ eItemCreate]
+    R.stepper (HKD.build @Item.Item (Compose Nothing)) $
+      Unsafe.head <$> R.unions [eItemCreateForm, HKD.build @Item.Item (Compose Nothing) <$ eItemCreate]
 
   return $
     Env.ItemEnv
