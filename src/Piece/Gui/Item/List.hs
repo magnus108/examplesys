@@ -46,7 +46,9 @@ setup env = mdo
 
   (deleteBtn, deleteBtnView) <- Elements.mkButton "Slet"
 
-  _ <- UI.element deleteBtn UI.# UI.sink UI.enabled (isJust . HKD.construct <$> Env.bItemDeleteForm itemEnv)
+  let bForm = HKD.construct <$> Env.bItemDeleteForm itemEnv
+
+  _ <- UI.element deleteBtn UI.# UI.sink UI.enabled (isJust <$> bForm)
 
   view <-
     Elements.mkContainer
@@ -58,10 +60,9 @@ setup env = mdo
       ]
 
   let tItemSelect = UI.userSelection listBoxItem
-      bItemSelect = R.facts tItemSelect
       tItemFilter = UI.userText filterItem
       eDelete = UI.click deleteBtn
 
-  let eItemDelete = R.filterJust $ HKD.construct <$> ((Env.bItemDeleteForm itemEnv) UI.<@ eDelete)
+  let eItemDelete = R.filterJust $ bForm UI.<@ eDelete
 
   return List {..}

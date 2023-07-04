@@ -15,6 +15,7 @@ import qualified Control.Monad.Fix as Fix
 import qualified Control.Monad.IO.Unlift as UnliftIO
 import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
+import qualified Data.Generic.HKD as HKD
 import qualified Data.Time.Clock as Time
 import qualified Graphics.UI.Threepenny.Core as UI
 import qualified Piece.App.Env as Env
@@ -23,7 +24,9 @@ import Piece.App.UserEnv (UserEnv (bUserCreate, bUserCreateForm))
 import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
+import qualified Piece.Core.Form.FormDataExpr as Form
 import qualified Piece.Core.Item as Item
+import qualified Piece.Core.ItemCreateForm as ItemCreateForm
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -41,6 +44,7 @@ import qualified Piece.Db.User as User
 import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
+import qualified Piece.Gui.Item.Create as ItemCreate
 import qualified Piece.Gui.Item.List as ItemList
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.TabButton as TabButton
@@ -73,6 +77,7 @@ main port = do
       userEdit <- UserEdit.setup env
 
       itemList <- ItemList.setup env
+      itemCreate <- ItemCreate.setup env
 
       let tabViews =
             [ UI.getElement loanCreate,
@@ -80,7 +85,8 @@ main port = do
               UI.getElement userLogin,
               UI.getElement userList,
               UI.getElement userEdit,
-              UI.getElement itemList
+              UI.getElement itemList,
+              UI.getElement itemCreate
             ]
 
       tabs <- TabButton.setup env
@@ -131,6 +137,11 @@ main port = do
 
         let eItemDelete = ItemList.eItemDelete itemList
 
+        let tItemCreateForm = ItemCreate.tItemCreateForm itemCreate
+            eItemCreateForm = R.rumors tItemCreateForm
+
+        let eItemCreate = ItemCreate.eItemCreate itemCreate
+
         ---- EDIT
         let tUserFilterEdit = UserEdit.tUserFilter userEdit
             eUserFilterEdit = R.rumors tUserFilterEdit
@@ -155,7 +166,7 @@ main port = do
         privilegeEnv <- privilegeEnvSetup config R.never
         tabEnv <- tabEnvSetup config R.never eSelectionTab
 
-        itemEnv <- itemEnvSetup config eItemFilter eItemSelect eItemDelete
+        itemEnv <- itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCreate
 
         let env =
               Env.Env
@@ -416,11 +427,26 @@ loanEnvSetup config loanCreate = do
         bModalState = bModalState
       }
 
-itemEnvSetup :: (Env.WithItemEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Item.Item)) => Config.Config -> R.Event String -> R.Event (Maybe Db.DatabaseKey) -> R.Event Item.Item -> m Env.ItemEnv
-itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
+itemEnvSetup ::
+  (Env.WithItemEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Item.Item)) =>
+  Config.Config ->
+  R.Event String ->
+  R.Event (Maybe Db.DatabaseKey) ->
+  R.Event Item.Item ->
+  R.Event ItemCreateForm.Item ->
+  R.Event Item.Item ->
+  m Env.ItemEnv
+itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCreate = mdo
   databaseItem <- Read.read (Config.datastoreItem config)
 
-  bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions [flip Db.delete <$> bDatabaseItem UI.<@> R.filterJust (bSelectItem UI.<@ eItemDelete)]
+  bDatabaseItem <-
+    R.stepper (fromRight Db.empty databaseItem) $
+      Unsafe.head
+        <$> R.unions
+          -- her burde jeg måske ikke slå op i selected. dvs itemDeleete skal indeholde alt.
+          [ flip Db.delete <$> bDatabaseItem UI.<@> R.filterJust (bSelectItem UI.<@ eItemDelete),
+            flip Db.create <$> bDatabaseItem UI.<@> eItemCreate
+          ]
 
   bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter, "" <$ eItemDelete]
 
@@ -429,6 +455,7 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
       Unsafe.head
         <$> R.unions
           [ eItemSelect,
+            -- fair nok jeg sletter slection ved delete og filter men lidt uheldigt det kommer 2 gange
             Nothing <$ eItemDelete,
             Nothing <$ eItemFilter
           ]
@@ -436,20 +463,27 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
   bLookup <- Item.lookup
 
   bItemDeleteForm <-
-    R.stepper mempty $
+    R.stepper (HKD.build @Item.Item Nothing) $
       Unsafe.head
         <$> R.unions
+          -- her må jeg ikke smide id væk
           [ deconstruct <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemSelect),
+            -- fair nok jeg sletter deleteform ved delete og filter men lidt uheldigt det kommer 2 gange
             mempty <$ eItemDelete,
             mempty <$ eItemFilter
           ]
+
+  bItemCreateForm <-
+    R.stepper (HKD.build @Item.Item (Form.StringExpr "")) $
+      Unsafe.head <$> R.unions [eItemCreateForm, HKD.build @Item.Item (Form.StringExpr "") <$ eItemCreate]
 
   return $
     Env.ItemEnv
       { bDatabaseItem = bDatabaseItem,
         bSelectItem = bSelectItem,
         bFilterItem = bFilterItem,
-        bItemDeleteForm = bItemDeleteForm
+        bItemDeleteForm = bItemDeleteForm,
+        bItemCreateForm = bItemCreateForm
       }
 
 roleEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Role.Role)) => Config.Config -> R.Event (Db.Database Role.Role) -> m Env.RoleEnv
