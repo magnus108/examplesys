@@ -7,6 +7,7 @@ module Piece.Core.Form.FormDataExpr
     FormData,
     getFormData,
     constructData,
+    getContainer,
   )
 where
 
@@ -16,8 +17,10 @@ data FormDataExpr a where
 type family FormData f a = r | r -> f a where
   FormData FormDataExpr String = String
 
-getFormData :: FormDataExpr a -> FormData FormDataExpr a
-getFormData (StringExpr param) = param
+newtype Container a = Container {getContainer :: FormData FormDataExpr a}
+
+getFormData :: FormDataExpr a -> Container a
+getFormData (StringExpr param) = Container param
 
 constructData :: FormDataExpr a -> a
 constructData (StringExpr param) = param

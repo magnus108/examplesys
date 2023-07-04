@@ -40,13 +40,14 @@ setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
   itemEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.ItemEnv
 
-  let bFormData = Env.bItemCreateForm itemEnv
-      bForm = HKD.construct . HKD.bmap (\x -> fmap Form.constructData (getCompose x)) <$> bFormData
+  let bForm = Env.bItemCreateForm itemEnv
+      bFormConstruction = HKD.construct . HKD.bmap (\x -> fmap Form.constructData (getCompose x)) <$> bForm
+      bFormData = HKD.bmap (\x -> Compose (fmap Form.getFormData (getCompose x))) <$> bForm
 
-  (itemName, itemNameView) <- Elements.mkInput "Item" ((\x -> maybe "" Form.getFormData (getCompose (Lens.view (HKD.field @"name") x))) <$> bFormData)
+  (itemName, itemNameView) <- Elements.mkInput "Item" ((\x -> maybe "" Form.getContainer (getCompose (Lens.view (HKD.field @"name") x))) <$> bFormData)
   (createBtn, createBtnView) <- Elements.mkButton "Opret"
 
-  _ <- UI.element createBtn UI.# UI.sink UI.enabled (isJust <$> bForm)
+  _ <- UI.element createBtn UI.# UI.sink UI.enabled (isJust <$> bFormConstruction)
 
   view <-
     Elements.mkContainer
@@ -59,5 +60,5 @@ setup env = mdo
   let tUserName = UI.userText itemName
       tItemCreateForm = (\name -> HKD.build @Item.Item (Compose (Just (Form.StringExpr name)))) <$> tUserName
       eCreate = UI.click createBtn
-      eItemCreate = R.filterJust $ bForm UI.<@ eCreate
+      eItemCreate = R.filterJust $ bFormConstruction UI.<@ eCreate
   return Create {..}
