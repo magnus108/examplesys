@@ -13,10 +13,10 @@ where
 data FormDataExpr a where
   StringExpr :: String -> FormDataExpr String
 
-type family FormData a = r | r -> a where
-  FormData (FormDataExpr String) = String
+type family FormData f a = r | r -> f a where
+  FormData FormDataExpr String = String
 
-getFormData :: FormDataExpr a -> FormData (FormDataExpr a)
+getFormData :: FormDataExpr a -> FormData FormDataExpr a
 getFormData (StringExpr param) = param
 
 constructData :: FormDataExpr a -> a

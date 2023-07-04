@@ -40,7 +40,7 @@ setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
   itemEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.ItemEnv
 
-  let bFormData = {-Barbie.bmap (\(x :: Form.FormDataExpr a) -> Form.getFormData x :: Form.FormData (Form.FormDataExpr a)) <$> -} (Env.bItemCreateForm itemEnv)
+  let bFormData = Env.bItemCreateForm itemEnv
       bForm = runIdentity . HKD.construct . HKD.bmap (\x -> Identity (Form.constructData x)) <$> bFormData
 
   (itemName, itemNameView) <- Elements.mkInput "Item" ((\x -> Form.getFormData (Lens.view (HKD.field @"name") x)) <$> bFormData)
