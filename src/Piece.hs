@@ -416,11 +416,11 @@ loanEnvSetup config loanCreate = do
         bModalState = bModalState
       }
 
-itemEnvSetup :: (Env.WithItemEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Item.Item)) => Config.Config -> R.Event String -> R.Event (Maybe Db.DatabaseKey) -> R.Event (Db.DatabaseKey, Item.Item) -> m Env.ItemEnv
+itemEnvSetup :: (Env.WithItemEnv env m, Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Item.Item)) => Config.Config -> R.Event String -> R.Event (Maybe Db.DatabaseKey) -> R.Event Item.Item -> m Env.ItemEnv
 itemEnvSetup config eItemFilter eItemSelect eItemDelete = mdo
   databaseItem <- Read.read (Config.datastoreItem config)
 
-  bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions [flip Db.delete <$> bDatabaseItem UI.<@> (fst <$> eItemDelete)]
+  bDatabaseItem <- R.stepper (fromRight Db.empty databaseItem) $ Unsafe.head <$> R.unions [flip Db.delete <$> bDatabaseItem UI.<@> R.filterJust (bSelectItem UI.<@ eItemDelete)]
 
   bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter, "" <$ eItemDelete]
 

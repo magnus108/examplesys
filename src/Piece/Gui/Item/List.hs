@@ -27,7 +27,7 @@ data List = List
   { view :: UI.Element,
     tItemSelect :: R.Tidings (Maybe Db.DatabaseKey),
     tItemFilter :: R.Tidings String,
-    eItemDelete :: R.Event (Db.DatabaseKey, Item.Item)
+    eItemDelete :: R.Event Item.Item
   }
 
 instance UI.Widget List where
@@ -62,6 +62,6 @@ setup env = mdo
       tItemFilter = UI.userText filterItem
       eDelete = UI.click deleteBtn
 
-  let eItemDelete = R.filterJust $ liftA2 (,) <$> bItemSelect UI.<@> (HKD.construct <$> ((Env.bItemDeleteForm itemEnv) UI.<@ eDelete))
+  let eItemDelete = R.filterJust $ HKD.construct <$> ((Env.bItemDeleteForm itemEnv) UI.<@ eDelete)
 
   return List {..}
