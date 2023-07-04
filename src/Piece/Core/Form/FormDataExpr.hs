@@ -14,10 +14,10 @@ where
 data FormDataExpr a where
   StringExpr :: String -> FormDataExpr String
 
-type family FormData f a = r | r -> f a where
-  FormData FormDataExpr String = String
+type family FormData a = r | r -> a where
+  FormData (FormDataExpr String) = String
 
-newtype Container a = Container {getContainer :: FormData FormDataExpr a}
+newtype Container a = Container {getContainer :: FormData (FormDataExpr a)}
 
 getFormData :: FormDataExpr a -> Container a
 getFormData (StringExpr param) = Container param
