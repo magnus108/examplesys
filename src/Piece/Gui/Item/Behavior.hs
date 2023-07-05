@@ -1,6 +1,7 @@
 module Piece.Gui.Item.Behavior
   ( displayItem,
     items,
+    itemsEdit,
   )
 where
 
@@ -21,6 +22,18 @@ items = do
   itemEnv <- Has.grab @Env.ItemEnv
   let bDatabaseItem = Env.bDatabaseItem itemEnv
   let bFilterItem = isPrefixOf <$> Env.bFilterItem itemEnv
+  bShowItem <- Item.showItem
+  return $
+    (\p display -> filter (p . display) . Db.keys)
+      <$> bFilterItem
+      <*> bShowItem
+      <*> bDatabaseItem
+
+itemsEdit :: (Env.WithItemEnv env m) => m (R.Behavior [Db.DatabaseKey])
+itemsEdit = do
+  itemEnv <- Has.grab @Env.ItemEnv
+  let bDatabaseItem = Env.bDatabaseItem itemEnv
+  let bFilterItem = isPrefixOf <$> Env.bItemEditFilter itemEnv
   bShowItem <- Item.showItem
   return $
     (\p display -> filter (p . display) . Db.keys)

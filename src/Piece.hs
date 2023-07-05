@@ -27,6 +27,7 @@ import qualified Piece.Config as Config
 import qualified Piece.Core.Form.FormDataExpr as Form
 import qualified Piece.Core.Item as Item
 import qualified Piece.Core.ItemCreateForm as ItemCreateForm
+import qualified Piece.Core.ItemEditForm as ItemEditForm
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -45,6 +46,7 @@ import qualified Piece.Effects.Read as Read
 import qualified Piece.Effects.Time as Time
 import qualified Piece.Effects.Write as Write
 import qualified Piece.Gui.Item.Create as ItemCreate
+import qualified Piece.Gui.Item.Edit as ItemEdit
 import qualified Piece.Gui.Item.List as ItemList
 import qualified Piece.Gui.Loan.Create as LoanCreate
 import qualified Piece.Gui.Tab.TabButton as TabButton
@@ -78,6 +80,7 @@ main port = do
 
       itemList <- ItemList.setup env
       itemCreate <- ItemCreate.setup env
+      itemEdit <- ItemEdit.setup env
 
       let tabViews =
             [ UI.getElement loanCreate,
@@ -86,7 +89,8 @@ main port = do
               UI.getElement userList,
               UI.getElement userEdit,
               UI.getElement itemList,
-              UI.getElement itemCreate
+              UI.getElement itemCreate,
+              UI.getElement itemEdit
             ]
 
       tabs <- TabButton.setup env
@@ -142,6 +146,19 @@ main port = do
 
         let eItemCreate = ItemCreate.eItemCreate itemCreate
 
+        -- Edit
+
+        let tItemEditFilter = ItemEdit.tItemFilter itemEdit
+            eItemEditFilter = R.rumors tItemEditFilter
+
+        let tItemEditSelect = ItemEdit.tItemSelect itemEdit
+            eItemEditSelect = R.rumors tItemEditSelect
+
+        let tItemEditForm = ItemEdit.tItemEditForm itemEdit
+            eItemEditForm = R.rumors tItemEditForm
+
+        let eItemEdit = ItemEdit.eItemEdit itemEdit
+
         ---- EDIT
         let tUserFilterEdit = UserEdit.tUserFilter userEdit
             eUserFilterEdit = R.rumors tUserFilterEdit
@@ -166,7 +183,7 @@ main port = do
         privilegeEnv <- privilegeEnvSetup config R.never
         tabEnv <- tabEnvSetup config R.never eSelectionTab
 
-        itemEnv <- itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCreate
+        itemEnv <- itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCreate eItemEditForm eItemEdit eItemEditFilter eItemEditSelect
 
         let env =
               Env.Env
@@ -435,8 +452,12 @@ itemEnvSetup ::
   R.Event Item.Item ->
   R.Event ItemCreateForm.Item ->
   R.Event Item.Item ->
+  R.Event ItemEditForm.Item ->
+  R.Event Item.Item ->
+  R.Event String ->
+  R.Event (Maybe Db.DatabaseKey) ->
   m Env.ItemEnv
-itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCreate = mdo
+itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCreate eItemEditForm eItemEdit eItemEditFilter eItemEditSelect = mdo
   databaseItem <- Read.read (Config.datastoreItem config)
 
   bDatabaseItem <-
@@ -445,9 +466,11 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
         <$> R.unions
           -- her burde jeg måske ikke slå op i selected. dvs itemDeleete skal indeholde alt.
           [ flip Db.delete <$> bDatabaseItem UI.<@> R.filterJust (bSelectItem UI.<@ eItemDelete),
-            flip Db.create <$> bDatabaseItem UI.<@> eItemCreate
+            flip Db.create <$> bDatabaseItem UI.<@> eItemCreate,
+            (\db (k, v) -> Db.update k v db) <$> bDatabaseItem UI.<@> R.filterJust (liftA2 (,) <$> bItemEditSelect UI.<@> (Just <$> eItemEdit))
           ]
 
+  -- Delete
   bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter, "" <$ eItemDelete]
 
   bSelectItem <-
@@ -473,9 +496,31 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
             mempty <$ eItemFilter
           ]
 
+  -- Create
+
   bItemCreateForm <-
     R.stepper (HKD.build @Item.Item (Compose Nothing)) $
       Unsafe.head <$> R.unions [eItemCreateForm, HKD.build @Item.Item (Compose Nothing) <$ eItemCreate]
+
+  -- EDIT
+
+  bItemEditFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eItemEditFilter]
+
+  bItemEditSelect <-
+    R.stepper Nothing $
+      Unsafe.head
+        <$> R.unions
+          [ eItemEditSelect
+          ]
+
+  bItemEditForm <-
+    R.stepper (HKD.build @Item.Item (Compose Nothing)) $
+      Unsafe.head
+        <$> R.unions
+          [ eItemEditForm,
+            HKD.build @Item.Item . Compose . Just . Form.StringExpr . Item.name <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemEditSelect),
+            HKD.build @Item.Item (Compose Nothing) <$ eItemEdit
+          ]
 
   return $
     Env.ItemEnv
@@ -483,7 +528,10 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
         bSelectItem = bSelectItem,
         bFilterItem = bFilterItem,
         bItemDeleteForm = bItemDeleteForm,
-        bItemCreateForm = bItemCreateForm
+        bItemCreateForm = bItemCreateForm,
+        bItemEditForm = bItemEditForm,
+        bItemEditSelect = bItemEditSelect,
+        bItemEditFilter = bItemEditFilter
       }
 
 roleEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Role.Role)) => Config.Config -> R.Event (Db.Database Role.Role) -> m Env.RoleEnv

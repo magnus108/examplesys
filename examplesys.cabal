@@ -65,6 +65,7 @@ common common-all
         Piece.Core.Form.FormDataExpr
         Piece.Core.ItemDeleteForm
         Piece.Core.ItemCreateForm
+        Piece.Core.ItemEditForm
         Piece.Core.UserCreateForm
         Piece.Core.UserEditForm
         Piece.Core.UserLoginForm
@@ -85,6 +86,7 @@ common common-all
         Piece.Gui.Item.Behavior
         Piece.Gui.Item.List
         Piece.Gui.Item.Create
+        Piece.Gui.Item.Edit
         Piece.Gui.User.Edit
 
     mixins:

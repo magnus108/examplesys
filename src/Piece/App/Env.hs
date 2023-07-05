@@ -26,6 +26,7 @@ import Piece.CakeSlayer.Has (Field (..), Has)
 import qualified Piece.Core.Item as Item
 import qualified Piece.Core.ItemCreateForm as ItemCreateForm
 import qualified Piece.Core.ItemDeleteForm as ItemDeleteForm
+import qualified Piece.Core.ItemEditForm as ItemEditForm
 import Piece.Core.Loan (Loan)
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
@@ -109,5 +110,8 @@ data ItemEnv = ItemEnv
     bSelectItem :: R.Behavior (Maybe DatabaseKey),
     bFilterItem :: R.Behavior String,
     bItemDeleteForm :: R.Behavior ItemDeleteForm.Item,
-    bItemCreateForm :: R.Behavior ItemCreateForm.Item
+    bItemCreateForm :: R.Behavior ItemCreateForm.Item,
+    bItemEditForm :: R.Behavior ItemEditForm.Item,
+    bItemEditSelect :: R.Behavior (Maybe DatabaseKey),
+    bItemEditFilter :: R.Behavior String
   }
