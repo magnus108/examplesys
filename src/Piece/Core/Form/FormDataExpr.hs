@@ -1,6 +1,5 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeFamilyDependencies #-}
 
 module Piece.Core.Form.FormDataExpr
   ( FormDataExpr (..),
@@ -14,7 +13,7 @@ where
 data FormDataExpr a where
   StringExpr :: String -> FormDataExpr String
 
-type family FormData a = r | r -> a where
+type family FormData a where
   FormData (FormDataExpr String) = String
 
 newtype Container a = Container {getContainer :: FormData (FormDataExpr a)}
