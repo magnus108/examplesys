@@ -47,7 +47,6 @@ setup env = mdo
 
   bDisplayItem <- liftIO $ Monad.runApp env Behavior.displayItem
   bItems <- liftIO $ Monad.runApp env Behavior.itemsEdit
-  bLookup <- liftIO $ Monad.runApp env Item.lookup
 
   ( (filterItem, filterItemView),
     (listBoxItem, listBoxItemView)
@@ -57,7 +56,9 @@ setup env = mdo
   let bForm = Env.bItemEditForm itemEnv
       bFormData = HKD.bmap (\x -> Compose (fmap Form.getFormData (getCompose x))) <$> bForm
 
-      bCurrentSelection = (\x -> maybe mempty HKD.deconstruct x) <$> ((=<<) <$> bLookup <*> (Env.bItemEditSelect itemEnv))
+  -- Higgely
+  bLookup <- liftIO $ Monad.runApp env Item.lookup
+  let bCurrentSelection = (\x -> maybe mempty HKD.deconstruct x) <$> ((=<<) <$> bLookup <*> (Env.bItemEditSelect itemEnv))
       bFormConstruction = (\form currentSelection -> HKD.construct $ (Barbie.bzipWith (\x y -> liftA2 (\x1 y1 -> Form.constructData x1) (getCompose x) y) form currentSelection)) <$> bForm <*> bCurrentSelection
 
   -- this fine
@@ -65,8 +66,8 @@ setup env = mdo
   (itemName, itemNameView) <- Elements.mkInput "Item" ((\x -> maybe "" Form.getContainer x) <$> bmItem)
   _ <- UI.element itemName UI.# UI.sink UI.enabled (isJust <$> bmItem)
 
+  -- this fine
   (editBtn, editBtnView) <- Elements.mkButton "Edit"
-
   _ <- UI.element editBtn UI.# UI.sink UI.enabled (isJust <$> bFormConstruction)
 
   view <-

@@ -518,8 +518,8 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
       Unsafe.head
         <$> R.unions
           [ eItemEditForm,
-            HKD.build @Item.Item . Compose . Just . Form.StringExpr . Item.name <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemEditSelect),
-            HKD.build @Item.Item (Compose Nothing) <$ eItemEdit
+            HKD.build @Item.Item (Compose Nothing) <$ eItemEdit,
+            HKD.build @Item.Item . Compose . Just . Form.StringExpr . Item.name <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemEditSelect)
           ]
 
   return $
