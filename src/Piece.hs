@@ -30,6 +30,7 @@ import qualified Piece.Core.Item as Item
 import qualified Piece.Core.ItemCreateForm as ItemCreateForm
 import qualified Piece.Core.ItemEditForm as ItemEditForm
 import qualified Piece.Core.Loan as Loan
+import qualified Piece.Core.LoanCreateForm as LoanCreateForm
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
@@ -175,10 +176,28 @@ main port = do
         let tUserEditingForm = UserEdit.tUserEditingForm userEdit
             eUserEditingForm = UI.rumors tUserEditingForm
 
+        -- LOAN CREATE
+        let tLoanCreateItemFilter = LoanCreate.tItemFilter loanCreate
+            eLoanCreateItemFilter = R.rumors tLoanCreateItemFilter
+
+        let tLoanCreateItemSelect = LoanCreate.tItemSelect loanCreate
+            eLoanCreateItemSelect = R.rumors tLoanCreateItemSelect
+
+        let tLoanCreateUserFilter = LoanCreate.tUserFilter loanCreate
+            eLoanCreateUserFilter = R.rumors tLoanCreateUserFilter
+
+        let tLoanCreateUserSelect = LoanCreate.tUserSelect loanCreate
+            eLoanCreateUserSelect = R.rumors tLoanCreateUserSelect
+
+        let tLoanCreateForm = LoanCreate.tLoanCreateForm loanCreate
+            eLoanCreateForm = R.rumors tLoanCreateForm
+
+        loanEnv <- loanEnvSetup config eLoanCreateUserSelect eLoanCreateUserFilter eLoanCreateItemSelect eLoanCreateItemFilter eLoanCreateForm
+
         timeEnv <- timeEnvSetup config eTime
         userEnv <- userEnvSetup config (Unsafe.head <$> R.unions [eUserCreateForm, eUserCreatingForm]) eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit (Unsafe.head <$> R.unions [eUserEditForm, eUserEditingForm]) eUserEditKeyValue
         tokenEnv <- tokenEnvSetup config eUserLogin eTime
-        loanEnv <- loanEnvSetup config loanCreate
+
         roleEnv <- roleEnvSetup config R.never
         privilegeEnv <- privilegeEnvSetup config R.never
         tabEnv <- tabEnvSetup config R.never eSelectionTab
@@ -239,7 +258,7 @@ listen config = do
     _ <- UI.liftIO $ R.onChange bDatabaseItem $ \s -> run $ void $ Write.write (Config.datastoreItem config) s
     return ()
 
-timeEnvSetup :: (Time.MonadTime m, MonadIO m) => Config.Config -> R.Event Time.Time -> m (Env.TimeEnv)
+timeEnvSetup :: (Time.MonadTime m, MonadIO m) => Config.Config -> R.Event Time.Time -> m Env.TimeEnv
 timeEnvSetup config eTime = do
   time <- Time.currentTime
   bTime <- R.stepper (Unsafe.fromJust (rightToMaybe time)) $ Unsafe.head <$> R.unions [eTime]
@@ -248,7 +267,7 @@ timeEnvSetup config eTime = do
       { Env.bTime = bTime
       }
 
-tabEnvSetup :: (Read.MonadRead m (Db.Database Tab.Tab), MonadIO m) => Config.Config -> R.Event (Db.Database Tab.Tab) -> R.Event (Maybe Db.DatabaseKey) -> m (Env.TabEnv)
+tabEnvSetup :: (Read.MonadRead m (Db.Database Tab.Tab), MonadIO m) => Config.Config -> R.Event (Db.Database Tab.Tab) -> R.Event (Maybe Db.DatabaseKey) -> m Env.TabEnv
 tabEnvSetup config eTab eSelectionTab = do
   databaseTab <- Read.read (Config.datastoreTab config)
   bDatabaseTab <- R.stepper (fromRight Db.empty databaseTab) $ Unsafe.head <$> R.unions [eTab]
@@ -260,20 +279,16 @@ tabEnvSetup config eTab eSelectionTab = do
       }
 
 userCreateSetup :: MonadIO m => R.Event (Maybe User.User) -> m (R.Behavior (Maybe User.User))
-userCreateSetup eUserCreate = do
-  R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
+userCreateSetup eUserCreate = R.stepper Nothing $ Unsafe.head <$> R.unions [eUserCreate]
 
 userLoginSetup :: MonadIO m => R.Event (Maybe Db.DatabaseKey) -> m (R.Behavior (Maybe Db.DatabaseKey))
-userLoginSetup eUserLogin = do
-  R.stepper Nothing $ Unsafe.head <$> R.unions [eUserLogin]
+userLoginSetup eUserLogin = R.stepper Nothing $ Unsafe.head <$> R.unions [eUserLogin]
 
 userCreateFormSetup :: (MonadIO m) => R.Event UserCreateForm.User -> R.Event (Maybe User.User) -> m (R.Behavior UserCreateForm.User)
-userCreateFormSetup eUserCreateForm eUserCreate = do
-  R.stepper (UserCreateForm.form "" "" False) $ Unsafe.head <$> R.unions [eUserCreateForm, UserCreateForm.form "" "" False <$ eUserCreate]
+userCreateFormSetup eUserCreateForm eUserCreate = R.stepper (UserCreateForm.form "" "" False) $ Unsafe.head <$> R.unions [eUserCreateForm, UserCreateForm.form "" "" False <$ eUserCreate]
 
 userLoginFormSetup :: MonadIO m => R.Event UserLoginForm.User -> R.Event (Maybe Db.DatabaseKey) -> m (R.Behavior (Maybe UserLoginForm.User))
-userLoginFormSetup eUserLoginForm eUserLogin = do
-  R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
+userLoginFormSetup eUserLoginForm eUserLogin = R.stepper Nothing $ Unsafe.head <$> R.unions [Just <$> eUserLoginForm, Nothing <$ eUserLogin]
 
 userEditFormSetup :: (Env.WithUserEnv env m, MonadIO m, Fix.MonadFix m) => R.Event (Maybe Db.DatabaseKey) -> R.Event UserEditForm.User -> R.Event (Maybe (Db.DatabaseKey, User.User)) -> m (R.Behavior UserEditForm.User)
 userEditFormSetup eSelectUserEdit eUserEditForm eUserEditKeyValue = mdo
@@ -338,8 +353,7 @@ databaseTokenSetup config eUserLogin eTime = mdo
   return bDatabaseToken
 
 selectionTokenSetup :: (MonadIO m) => m (R.Behavior (Maybe Db.DatabaseKey))
-selectionTokenSetup = do
-  R.stepper (Just 0) $ Unsafe.head <$> R.unions []
+selectionTokenSetup = R.stepper (Just 0) $ Unsafe.head <$> R.unions []
 
 ttlSetup :: (MonadIO m) => m (R.Behavior (Maybe Time.NominalDiffTime))
 ttlSetup = R.stepper (Just (Time.secondsToNominalDiffTime 100)) $ Unsafe.head <$> R.unions []
@@ -417,31 +431,44 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
         bUserEditForm = bUserEditForm
       }
 
-loanEnvSetup :: (MonadIO m, Read.MonadRead m (Db.Database Loan.Loan)) => Config.Config -> LoanCreate.Create -> m Env.LoanEnv
-loanEnvSetup config loanCreate = do
+loanEnvSetup ::
+  (Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Loan.Loan)) =>
+  Config.Config ->
+  R.Event (Maybe Db.DatabaseKey) ->
+  R.Event String ->
+  R.Event (Maybe Db.DatabaseKey) ->
+  R.Event String ->
+  R.Event LoanCreateForm.Loan ->
+  m Env.LoanEnv
+loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateForm = mdo
   databaseLoan <- Read.read (Config.datastoreLoan config)
-  let tLoanFilter = LoanCreate.tLoanFilter loanCreate
-  let eLoanFilter = R.rumors tLoanFilter
 
-  bDatabaseLoan <- R.stepper (fromRight Db.empty databaseLoan) $ Unsafe.head <$> R.unions []
-  bSelectionUser <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionItem <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bSelectionLoan <- R.stepper Nothing $ Unsafe.head <$> R.unions []
-  bFilterUser <- R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterItem <- R.stepper "" $ Unsafe.head <$> R.unions []
-  bFilterLoan <- R.stepper "" $ Unsafe.head <$> R.unions [eLoanFilter]
-  bModalState <- R.stepper False $ Unsafe.head <$> R.unions []
+  bDatabaseLoan <-
+    R.stepper (fromRight Db.empty databaseLoan) $
+      Unsafe.head
+        <$> R.unions
+          []
+  -- flip Db.create <$> bDatabaseLoan UI.<@> eLoanCreateForm
+
+  bLoanCreateUserSelect <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserSelect]
+  bLoanCreateItemSelect <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect]
+  bLoanCreateUserFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eUserFilter]
+  bLoanCreateItemFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
+
+  bLoanCreateForm <-
+    R.stepper (HKD.build @Loan.Loan (Form.Form Nothing Form.SelectExpr) (Form.Form Nothing Form.SelectExpr)) $
+      Unsafe.head
+        <$> R.unions
+          []
 
   return $
     Env.LoanEnv
       { bDatabaseLoan = bDatabaseLoan,
-        bSelectionUser = bSelectionUser,
-        bSelectionItem = bSelectionItem,
-        bSelectionLoan = bSelectionLoan,
-        bFilterUser = bFilterUser,
-        _bFilterItem = bFilterItem,
-        bFilterLoan = bFilterLoan,
-        bModalState = bModalState
+        bLoanCreateUserSelect = bLoanCreateUserSelect,
+        bLoanCreateItemSelect = bLoanCreateItemSelect,
+        bLoanCreateUserFilter = bLoanCreateUserFilter,
+        bLoanCreateItemFilter = bLoanCreateItemFilter,
+        bLoanCreateForm = bLoanCreateForm
       }
 
 itemEnvSetup ::
@@ -514,11 +541,11 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
           ]
 
   bItemEditForm <-
-    R.stepper (HKD.build @Item.Item (ItemEditForm.Form Nothing (\x -> Form.StringExpr x))) $
+    R.stepper (HKD.build @Item.Item (ItemEditForm.Form Nothing Form.StringExpr)) $
       Unsafe.head
         <$> R.unions
           [ eItemEditForm,
-            Barbie.bmap (\x -> ItemEditForm.Form Nothing (ItemEditForm.to x)) <$> bItemEditForm UI.<@ eItemEdit,
+            Barbie.bmap (ItemEditForm.Form Nothing . ItemEditForm.to) <$> bItemEditForm UI.<@ eItemEdit,
             Barbie.bzipWith (\f i -> ItemEditForm.Form (Just (ItemEditForm.to f (runIdentity i))) (ItemEditForm.to f)) <$> bItemEditForm R.<@> (HKD.deconstruct @Identity <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemEditSelect))
           ]
 

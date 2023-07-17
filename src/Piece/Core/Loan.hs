@@ -1,17 +1,15 @@
 module Piece.Core.Loan
   ( Loan,
-    loan,
-    name,
+    user,
+    item,
   )
 where
 
 import Data.Aeson (FromJSON, ToJSON)
 
-newtype Loan = Loan
-  { name :: String
+data Loan = Loan
+  { user :: Int,
+    item :: Int
   }
   deriving stock (Show, Eq, Generic)
-  deriving newtype (ToJSON, FromJSON)
-
-loan :: String -> Loan
-loan = Loan
+  deriving anyclass (ToJSON, FromJSON)

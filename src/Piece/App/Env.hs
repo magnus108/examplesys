@@ -28,6 +28,7 @@ import qualified Piece.Core.ItemCreateForm as ItemCreateForm
 import qualified Piece.Core.ItemDeleteForm as ItemDeleteForm
 import qualified Piece.Core.ItemEditForm as ItemEditForm
 import Piece.Core.Loan (Loan)
+import qualified Piece.Core.LoanCreateForm as LoanCreateForm
 import qualified Piece.Core.Privilege as Privilege
 import qualified Piece.Core.Role as Role
 import qualified Piece.Core.Tab as Tab
@@ -96,13 +97,11 @@ data PrivilegeEnv = PrivilegeEnv
 
 data LoanEnv = LoanEnv
   { bDatabaseLoan :: R.Behavior (Database Loan),
-    bSelectionUser :: R.Behavior (Maybe DatabaseKey),
-    bSelectionItem :: R.Behavior (Maybe DatabaseKey),
-    bSelectionLoan :: R.Behavior (Maybe DatabaseKey),
-    bFilterUser :: R.Behavior String,
-    _bFilterItem :: R.Behavior String,
-    bFilterLoan :: R.Behavior String,
-    bModalState :: R.Behavior Bool
+    bLoanCreateForm :: R.Behavior LoanCreateForm.Loan,
+    bLoanCreateUserSelect :: R.Behavior (Maybe DatabaseKey),
+    bLoanCreateUserFilter :: R.Behavior String,
+    bLoanCreateItemSelect :: R.Behavior (Maybe DatabaseKey),
+    bLoanCreateItemFilter :: R.Behavior String
   }
 
 data ItemEnv = ItemEnv
