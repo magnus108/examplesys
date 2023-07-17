@@ -32,6 +32,6 @@ constructData (StringExpr param) = param
 constructData (SelectExpr param) = param
 
 data Form a = Form
-  { from :: Maybe (FormDataExpr a),
-    to :: a -> FormDataExpr a
+  { from :: Maybe (FormDataExpr a), -- FROM A FORM
+    to :: a -> FormDataExpr a -- TO A FORM
   }

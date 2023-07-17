@@ -7,6 +7,7 @@ module Piece.Gui.Loan.Create
     tItemFilter,
     tItemSelect,
     tLoanCreateForm,
+    tLoanCreate,
     Create,
   )
 where
@@ -39,7 +40,8 @@ data Create = Create
     tUserFilter :: R.Tidings String,
     tItemSelect :: R.Tidings (Maybe Db.DatabaseKey),
     tItemFilter :: R.Tidings String,
-    tLoanCreateForm :: R.Tidings LoanCreateForm.Loan
+    tLoanCreateForm :: R.Tidings LoanCreateForm.Loan,
+    tLoanCreate :: R.Tidings (Maybe Loan.Loan)
   }
 
 instance UI.Widget Create where
@@ -48,6 +50,7 @@ instance UI.Widget Create where
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
   loanEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.LoanEnv
+
   let userSelect = Env.bLoanCreateUserSelect loanEnv
       userFilter = Env.bLoanCreateUserFilter loanEnv
 
@@ -73,9 +76,9 @@ setup env = mdo
   (createBtn, createBtnView) <- Elements.mkButton "Opret"
 
   let bForm = Env.bLoanCreateForm loanEnv
-      bFormConstruction = HKD.construct . Barbie.bmap (fmap Form.constructData . Form.from) <$> bForm
+      bConstruction = HKD.construct . Barbie.bmap (fmap Form.constructData . Form.from) <$> bForm
 
-  _ <- UI.element createBtn UI.# UI.sink UI.enabled (isJust <$> bFormConstruction)
+  _ <- UI.element createBtn UI.# UI.sink UI.enabled (isJust <$> bConstruction)
 
   view <-
     Elements.mkContainer
@@ -96,8 +99,11 @@ setup env = mdo
 
   let eCreate = UI.click createBtn
 
+  -- should be undone
   let tFormData = HKD.build @Loan.Loan <$> tUserSelect <*> tItemSelect :: R.Tidings (HKD.HKD Loan.Loan Maybe)
-  --  let bFormData = (\form userId itemId -> HKD.build @Loan.Loan (Form.Form (Just (Form.to (Lens.view (HKD.field @"name") form) name))
-  --                                                                       (Form.to (Lens.view (HKD.field @"name") form)))) <$> bForm <*>
-  let tLoanCreateForm = R.tidings bForm $ undefined -- bFormData UI.<@ eCreate
+      tLoanCreateForm = Barbie.bzipWith (\orig new -> Form.Form (Form.to orig <$> new) (Form.to orig)) <$> R.tidings bForm R.never <*> tFormData
+  -- should be undone
+
+  let tLoanCreate = R.tidings bConstruction $ bConstruction UI.<@ eCreate
+
   return Create {..}

@@ -192,7 +192,10 @@ main port = do
         let tLoanCreateForm = LoanCreate.tLoanCreateForm loanCreate
             eLoanCreateForm = R.rumors tLoanCreateForm
 
-        loanEnv <- loanEnvSetup config eLoanCreateUserSelect eLoanCreateUserFilter eLoanCreateItemSelect eLoanCreateItemFilter eLoanCreateForm
+        let tLoanCreate = LoanCreate.tLoanCreate loanCreate
+            eLoanCreate = R.rumors tLoanCreate
+
+        loanEnv <- loanEnvSetup config eLoanCreateUserSelect eLoanCreateUserFilter eLoanCreateItemSelect eLoanCreateItemFilter eLoanCreateForm eLoanCreate
 
         timeEnv <- timeEnvSetup config eTime
         userEnv <- userEnvSetup config (Unsafe.head <$> R.unions [eUserCreateForm, eUserCreatingForm]) eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit (Unsafe.head <$> R.unions [eUserEditForm, eUserEditingForm]) eUserEditKeyValue
@@ -439,16 +442,16 @@ loanEnvSetup ::
   R.Event (Maybe Db.DatabaseKey) ->
   R.Event String ->
   R.Event LoanCreateForm.Loan ->
+  R.Event (Maybe Loan.Loan) ->
   m Env.LoanEnv
-loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateForm = mdo
+loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateForm eLoanCreate = mdo
   databaseLoan <- Read.read (Config.datastoreLoan config)
 
   bDatabaseLoan <-
     R.stepper (fromRight Db.empty databaseLoan) $
       Unsafe.head
         <$> R.unions
-          []
-  -- flip Db.create <$> bDatabaseLoan UI.<@> eLoanCreateForm
+          [flip Db.create <$> bDatabaseLoan UI.<@> R.filterJust eLoanCreate]
 
   bLoanCreateUserSelect <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserSelect]
   bLoanCreateItemSelect <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect]
@@ -459,7 +462,7 @@ loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateF
     R.stepper (HKD.build @Loan.Loan (Form.Form Nothing Form.SelectExpr) (Form.Form Nothing Form.SelectExpr)) $
       Unsafe.head
         <$> R.unions
-          []
+          [eLoanCreateForm]
 
   return $
     Env.LoanEnv
