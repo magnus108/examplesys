@@ -5,7 +5,7 @@ module Piece.Gui.Item.Edit
   ( setup,
     tItemSelect,
     tItemFilter,
-    tItemEditForm,
+    eItemEditForm,
     eItemEdit,
   )
 where
@@ -34,7 +34,7 @@ data Edit = Edit
   { view :: UI.Element,
     tItemSelect :: R.Tidings (Maybe Db.DatabaseKey),
     tItemFilter :: R.Tidings String,
-    tItemEditForm :: R.Tidings ItemEditForm.Item,
+    eItemEditForm :: R.Event ItemEditForm.Item,
     eItemEdit :: R.Event Item.Item
   }
 
@@ -54,12 +54,12 @@ setup env = mdo
     Elements.mkSearchEntry bItems (Env.bItemEditSelect itemEnv) bDisplayItem (Env.bItemEditFilter itemEnv)
 
   let bForm = Env.bItemEditForm itemEnv
-      bFormData = HKD.bmap (\x -> Compose (fmap Form.getFormData (getCompose x))) <$> bForm
+      bFormData = HKD.bmap (\x -> (Compose (Form.getFormData <$> (ItemEditForm.from x)))) <$> bForm
 
   -- Higgely
   bLookup <- liftIO $ Monad.runApp env Item.lookup
   let bCurrentSelection = (\x -> maybe mempty HKD.deconstruct x) <$> ((=<<) <$> bLookup <*> (Env.bItemEditSelect itemEnv))
-      bFormConstruction = (\form currentSelection -> HKD.construct $ (Barbie.bzipWith (\x y -> liftA2 (\x1 y1 -> Form.constructData x1) (getCompose x) y) form currentSelection)) <$> bForm <*> bCurrentSelection
+      bFormConstruction = (\form currentSelection -> HKD.construct $ (Barbie.bzipWith (\x y -> liftA2 (\x1 y1 -> Form.constructData x1) (ItemEditForm.from x) y) form currentSelection)) <$> bForm <*> bCurrentSelection
 
   -- this fine
   let bmItem = (\x -> getCompose (Lens.view (HKD.field @"name") x)) <$> bFormData
@@ -83,7 +83,7 @@ setup env = mdo
   let tItemSelect = UI.userSelection listBoxItem
       tItemFilter = UI.userText filterItem
       tUserName = UI.userText itemName
-      tItemEditForm = (\name -> HKD.build @Item.Item (Compose (Just (Form.StringExpr name)))) <$> tUserName
+      eItemEditForm = (\f name -> HKD.build @Item.Item (ItemEditForm.Form (Just (ItemEditForm.to (Lens.view (HKD.field @"name") f) name)) (ItemEditForm.to (Lens.view (HKD.field @"name") f)))) <$> bForm R.<@> (R.rumors tUserName)
       eEdit = UI.click editBtn
       eItemEdit = R.filterJust $ bFormConstruction UI.<@ eEdit
   return Edit {..}

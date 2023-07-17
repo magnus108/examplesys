@@ -13,6 +13,7 @@ where
 
 import qualified Control.Monad.Fix as Fix
 import qualified Control.Monad.IO.Unlift as UnliftIO
+import qualified Data.Barbie as Barbie
 import qualified Data.Functor.Product as Product
 import Data.Generic.HKD
 import qualified Data.Generic.HKD as HKD
@@ -154,8 +155,7 @@ main port = do
         let tItemEditSelect = ItemEdit.tItemSelect itemEdit
             eItemEditSelect = R.rumors tItemEditSelect
 
-        let tItemEditForm = ItemEdit.tItemEditForm itemEdit
-            eItemEditForm = R.rumors tItemEditForm
+        let eItemEditForm = ItemEdit.eItemEditForm itemEdit
 
         let eItemEdit = ItemEdit.eItemEdit itemEdit
 
@@ -514,12 +514,12 @@ itemEnvSetup config eItemFilter eItemSelect eItemDelete eItemCreateForm eItemCre
           ]
 
   bItemEditForm <-
-    R.stepper (HKD.build @Item.Item (Compose Nothing)) $
+    R.stepper (HKD.build @Item.Item (ItemEditForm.Form Nothing (\x -> Form.StringExpr x))) $
       Unsafe.head
         <$> R.unions
           [ eItemEditForm,
-            HKD.build @Item.Item (Compose Nothing) <$ eItemEdit,
-            HKD.build @Item.Item . Compose . Just . Form.StringExpr . Item.name <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemEditSelect)
+            Barbie.bmap (\x -> ItemEditForm.Form Nothing (ItemEditForm.to x)) <$> bItemEditForm UI.<@ eItemEdit,
+            Barbie.bzipWith (\f i -> ItemEditForm.Form (Just (ItemEditForm.to f (runIdentity i))) (ItemEditForm.to f)) <$> bItemEditForm R.<@> (HKD.deconstruct @Identity <$> R.filterJust ((=<<) <$> bLookup UI.<@> eItemEditSelect))
           ]
 
   return $
