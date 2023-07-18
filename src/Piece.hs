@@ -180,14 +180,8 @@ main port = do
         let tLoanCreateItemFilter = LoanCreate.tItemFilter loanCreate
             eLoanCreateItemFilter = R.rumors tLoanCreateItemFilter
 
-        let tLoanCreateItemSelect = LoanCreate.tItemSelect loanCreate
-            eLoanCreateItemSelect = R.rumors tLoanCreateItemSelect
-
         let tLoanCreateUserFilter = LoanCreate.tUserFilter loanCreate
             eLoanCreateUserFilter = R.rumors tLoanCreateUserFilter
-
-        let tLoanCreateUserSelect = LoanCreate.tUserSelect loanCreate
-            eLoanCreateUserSelect = R.rumors tLoanCreateUserSelect
 
         let tLoanCreateForm = LoanCreate.tLoanCreateForm loanCreate
             eLoanCreateForm = R.rumors tLoanCreateForm
@@ -195,7 +189,7 @@ main port = do
         let tLoanCreate = LoanCreate.tLoanCreate loanCreate
             eLoanCreate = R.rumors tLoanCreate
 
-        loanEnv <- loanEnvSetup config eLoanCreateUserSelect eLoanCreateUserFilter eLoanCreateItemSelect eLoanCreateItemFilter eLoanCreateForm eLoanCreate
+        loanEnv <- loanEnvSetup config eLoanCreateUserFilter eLoanCreateItemFilter eLoanCreateForm eLoanCreate
 
         timeEnv <- timeEnvSetup config eTime
         userEnv <- userEnvSetup config (Unsafe.head <$> R.unions [eUserCreateForm, eUserCreatingForm]) eUserCreate eUserLoginForm eUserLogin eTime eUserSelect eUserFilter eUserDelete {-edit-} eUserSelectionEdit eUserFilterEdit (Unsafe.head <$> R.unions [eUserEditForm, eUserEditingForm]) eUserEditKeyValue
@@ -437,14 +431,12 @@ userEnvSetup config eUserCreateForm eUserCreate eUserLoginForm eUserLogin eTime 
 loanEnvSetup ::
   (Fix.MonadFix m, MonadIO m, Read.MonadRead m (Db.Database Loan.Loan)) =>
   Config.Config ->
-  R.Event (Maybe Db.DatabaseKey) ->
   R.Event String ->
-  R.Event (Maybe Db.DatabaseKey) ->
   R.Event String ->
   R.Event LoanCreateForm.Loan ->
   R.Event (Maybe Loan.Loan) ->
   m Env.LoanEnv
-loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateForm eLoanCreate = mdo
+loanEnvSetup config eUserFilter eItemFilter eLoanCreateForm eLoanCreate = mdo
   databaseLoan <- Read.read (Config.datastoreLoan config)
 
   bDatabaseLoan <-
@@ -453,8 +445,6 @@ loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateF
         <$> R.unions
           [flip Db.create <$> bDatabaseLoan UI.<@> R.filterJust eLoanCreate]
 
-  bLoanCreateUserSelect <- R.stepper Nothing $ Unsafe.head <$> R.unions [eUserSelect]
-  bLoanCreateItemSelect <- R.stepper Nothing $ Unsafe.head <$> R.unions [eItemSelect]
   bLoanCreateUserFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eUserFilter]
   bLoanCreateItemFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
 
@@ -467,8 +457,6 @@ loanEnvSetup config eUserSelect eUserFilter eItemSelect eItemFilter eLoanCreateF
   return $
     Env.LoanEnv
       { bDatabaseLoan = bDatabaseLoan,
-        bLoanCreateUserSelect = bLoanCreateUserSelect,
-        bLoanCreateItemSelect = bLoanCreateItemSelect,
         bLoanCreateUserFilter = bLoanCreateUserFilter,
         bLoanCreateItemFilter = bLoanCreateItemFilter,
         bLoanCreateForm = bLoanCreateForm

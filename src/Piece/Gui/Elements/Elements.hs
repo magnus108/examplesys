@@ -7,6 +7,7 @@ module Piece.Gui.Elements.Elements
     mkListBox,
     mkSearchEntry,
     mkInput,
+    mkSearch,
   )
 where
 

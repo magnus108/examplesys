@@ -98,9 +98,7 @@ data PrivilegeEnv = PrivilegeEnv
 data LoanEnv = LoanEnv
   { bDatabaseLoan :: R.Behavior (Database Loan),
     bLoanCreateForm :: R.Behavior LoanCreateForm.Loan,
-    bLoanCreateUserSelect :: R.Behavior (Maybe DatabaseKey),
     bLoanCreateUserFilter :: R.Behavior String,
-    bLoanCreateItemSelect :: R.Behavior (Maybe DatabaseKey),
     bLoanCreateItemFilter :: R.Behavior String
   }
 
