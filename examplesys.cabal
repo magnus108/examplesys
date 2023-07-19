@@ -63,6 +63,7 @@ common common-all
         Piece.Core.User
         Piece.Gui.User.Login
         Piece.Core.Form.FormDataExpr
+        Piece.Core.Form.FormDataExpr2
         Piece.Core.ItemDeleteForm
         Piece.Core.ItemCreateForm
         Piece.Core.ItemEditForm

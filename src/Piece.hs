@@ -26,6 +26,7 @@ import qualified Piece.App.UserEnv as UserEnv
 import qualified Piece.CakeSlayer.Has as Has
 import qualified Piece.Config as Config
 import qualified Piece.Core.Form.FormDataExpr as Form
+import qualified Piece.Core.Form.FormDataExpr2 as Form2
 import qualified Piece.Core.Item as Item
 import qualified Piece.Core.ItemCreateForm as ItemCreateForm
 import qualified Piece.Core.ItemEditForm as ItemEditForm
@@ -449,7 +450,7 @@ loanEnvSetup config eUserFilter eItemFilter eLoanCreateForm eLoanCreate = mdo
   bLoanCreateItemFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
 
   bLoanCreateForm <-
-    R.stepper (HKD.build @Loan.Loan (Form.Form Nothing Form.SelectExpr) (Form.Form Nothing Form.SelectExpr)) $
+    R.stepper (HKD.build @Loan.Loan (Form2.Form Nothing Form2.SelectData) (Form2.Form Nothing Form2.SelectData)) $
       Unsafe.head
         <$> R.unions
           [eLoanCreateForm]

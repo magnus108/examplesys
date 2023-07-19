@@ -24,7 +24,7 @@ import qualified Graphics.UI.Threepenny.Widgets as Widgets
 import qualified Piece.App.Env as Env
 import qualified Piece.App.Monad as Monad
 import qualified Piece.CakeSlayer.Has as Has
-import qualified Piece.Core.Form.FormDataExpr as Form
+import qualified Piece.Core.Form.FormDataExpr2 as Form
 import qualified Piece.Core.Loan as Loan
 import qualified Piece.Core.LoanCreateForm as LoanCreateForm
 import qualified Piece.Db.Db as Db
@@ -46,33 +46,27 @@ instance UI.Widget Create where
   getElement = view
 
 mkSearchEntry ::
-  Ord a =>
-  UI.Behavior [a] ->
-  UI.Behavior (Form.Form a) ->
-  UI.Behavior (a -> UI.UI UI.Element) ->
+  UI.Behavior [Int] ->
+  UI.Behavior (Form.Form Int) ->
+  UI.Behavior (Int -> UI.UI UI.Element) ->
   UI.Behavior String ->
-  UI.UI ((UI.TextEntry, UI.Element), (ListBox a, UI.Element))
+  UI.UI ((UI.TextEntry, UI.Element), ((R.Tidings (Form.Form Int), UI.Element), UI.Element))
 mkSearchEntry bItems bSel bDisplay bFilterItem = do
   filter <- Elements.mkSearch bFilterItem
   listBox <- mkListBox bItems bSel bDisplay
   -- counterView <- mkCounter bItems
   return (filter, listBox)
 
-data ListBox a = ListBox
-  { _elementLB :: UI.Element,
-    _selectionLB :: R.Tidings (Form.Form a)
-  }
+loller :: R.Behavior (Form.Form Int) -> UI.UI (R.Tidings (Form.Form Int), UI.Element)
+loller bSel = undefined
 
-instance UI.Widget (ListBox a) where
-  getElement = _elementLB
+-- let bSel' = (\x -> Form.to x . Form.constructData <$> Form.from x) <$> bSel
 
-userSelection :: ListBox a -> R.Tidings (Form.Form a)
-userSelection = _selectionLB
-
-mkListBox :: Ord a => R.Behavior [a] -> R.Behavior (Form.Form a) -> R.Behavior (a -> UI.UI UI.Element) -> UI.UI (ListBox a, UI.Element)
+mkListBox :: R.Behavior [Int] -> R.Behavior (Form.Form Int) -> R.Behavior (Int -> UI.UI UI.Element) -> UI.UI ((R.Tidings (Form.Form Int), UI.Element), UI.Element)
 mkListBox bItems bSel bDisplay = do
-  let bSel' = (\x -> Form.constructData . Form.to x . Form.constructData <$> Form.from x) <$> bSel
+  let bSel' = (\x -> Form.to x . Form.constructData <$> Form.from x) <$> bSel
   listBox <- UI.listBox bItems bSel' bDisplay
+  (tSelect, elem) <- loller bSel
   view <-
     UI.div
       UI.#. "field"
@@ -80,15 +74,15 @@ mkListBox bItems bSel bDisplay = do
                 UI.#. "control is-expanded"
                 UI.#+ [ UI.div
                           UI.#. "select is-multiple is-fullwidth"
-                          UI.#+ [UI.element listBox UI.# UI.set (UI.attr "size") "5" UI.# UI.set UI.style [("height", "auto")]]
+                          UI.#+ [UI.element elem UI.# UI.set (UI.attr "size") "5" UI.# UI.set UI.style [("height", "auto")]]
                       ]
             ]
-  let tSelect = UI.userSelection listBox
-      eSelect = R.rumors tSelect
+  --  let tSelect = UI.userSelection listBox
+  -- let eSelect = R.rumors tSelect
 
-  let tSelect' = R.tidings bSel $ (\orig new -> Form.Form (Form.to orig <$> new) (Form.to orig)) <$> bSel R.<@> eSelect
-  let listBox' = ListBox (UI.getElement listBox) tSelect'
-  return (listBox', view)
+  --  let tSelect' = R.tidings bSel $ (\orig new -> Form.Form (Form.SelectExpr <$> new) (Form.to orig)) <$> bSel R.<@> eSelect
+  --  let listBox' = ListBox (UI.getElement listBox) undefined -- tSelect'
+  return ((tSelect, elem), view)
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
@@ -110,12 +104,12 @@ setup env = mdo
   bItems <- liftIO $ Monad.runApp env Behavior.items
 
   ( (filterUser, filterUserView),
-    (listBoxUser, listBoxUserView)
+    ((tUserSelect, listBoxUser), listBoxUserView)
     ) <-
     mkSearchEntry bUsers userSelect bDisplayUser userFilter
 
   ( (filterItem, filterItemView),
-    (listBoxItem, listBoxItemView)
+    ((tItemSelect, listBoxItem), listBoxItemView)
     ) <-
     mkSearchEntry bItems itemSelect bDisplayItem itemFilter
 
@@ -134,10 +128,7 @@ setup env = mdo
                 ]
       ]
 
-  let tItemSelect = userSelection listBoxItem
-      tItemFilter = UI.userText filterItem
-
-  let tUserSelect = userSelection listBoxUser
+  let tItemFilter = UI.userText filterItem
       tUserFilter = UI.userText filterUser
 
   let eCreate = UI.click createBtn
