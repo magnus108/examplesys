@@ -6,7 +6,7 @@ module Piece.Gui.Loan.Create
     tUserFilter,
     tItemFilter,
     tLoanCreateForm,
-    tLoanCreate,
+    eLoanCreate,
     Create,
   )
 where
@@ -39,7 +39,7 @@ data Create = Create
     tUserFilter :: R.Tidings String,
     tItemFilter :: R.Tidings String,
     tLoanCreateForm :: R.Tidings LoanCreateForm.Loan,
-    tLoanCreate :: R.Tidings (Maybe Loan.Loan)
+    eLoanCreate :: R.Event (Maybe Loan.Loan) -- kan laves til tiding hvis info skal gemmes
   }
 
 instance UI.Widget Create where
@@ -57,16 +57,10 @@ mkSearchEntry bItems bSel bDisplay bFilterItem = do
   -- counterView <- mkCounter bItems
   return (filter, listBox)
 
-loller :: R.Behavior (Form.Form Int) -> UI.UI (R.Tidings (Form.Form Int), UI.Element)
-loller bSel = undefined
-
--- let bSel' = (\x -> Form.to x . Form.constructData <$> Form.from x) <$> bSel
-
 mkListBox :: R.Behavior [Int] -> R.Behavior (Form.Form Int) -> R.Behavior (Int -> UI.UI UI.Element) -> UI.UI ((R.Tidings (Form.Form Int), UI.Element), UI.Element)
 mkListBox bItems bSel bDisplay = do
-  let bSel' = (\x -> Form.to x . Form.constructData <$> Form.from x) <$> bSel
+  let bSel' = (\x -> Form.from x) <$> bSel
   listBox <- UI.listBox bItems bSel' bDisplay
-  (tSelect, elem) <- loller bSel
   view <-
     UI.div
       UI.#. "field"
@@ -74,10 +68,10 @@ mkListBox bItems bSel bDisplay = do
                 UI.#. "control is-expanded"
                 UI.#+ [ UI.div
                           UI.#. "select is-multiple is-fullwidth"
-                          UI.#+ [UI.element elem UI.# UI.set (UI.attr "size") "5" UI.# UI.set UI.style [("height", "auto")]]
+                          UI.#+ [UI.element listBox UI.# UI.set (UI.attr "size") "5" UI.# UI.set UI.style [("height", "auto")]]
                       ]
             ]
-  --  let tSelect = UI.userSelection listBox
+  let tSelect = undefined -- UI.userSelection listBox
   -- let eSelect = R.rumors tSelect
 
   --  let tSelect' = R.tidings bSel $ (\orig new -> Form.Form (Form.SelectExpr <$> new) (Form.to orig)) <$> bSel R.<@> eSelect
@@ -89,7 +83,7 @@ setup env = mdo
   loanEnv <- liftIO $ Monad.runApp env $ Has.grab @Env.LoanEnv
 
   let bForm = Env.bLoanCreateForm loanEnv
-      bConstruction = HKD.construct . Barbie.bmap (fmap Form.constructData . Form.from) <$> bForm
+      bFrom = Barbie.bmap Form.from <$> bForm
 
   let userFilter = Env.bLoanCreateUserFilter loanEnv
       itemFilter = Env.bLoanCreateItemFilter loanEnv
@@ -115,7 +109,7 @@ setup env = mdo
 
   (createBtn, createBtnView) <- Elements.mkButton "Opret"
 
-  _ <- UI.element createBtn UI.# UI.sink UI.enabled (isJust <$> bConstruction)
+  _ <- UI.element createBtn UI.# UI.sink UI.enabled (isJust . Barbie.bsequence <$> bFrom)
 
   view <-
     Elements.mkContainer
@@ -135,6 +129,5 @@ setup env = mdo
 
   let tLoanCreateForm = HKD.build @Loan.Loan <$> tUserSelect <*> tItemSelect
 
-  let tLoanCreate = R.tidings bConstruction $ bConstruction UI.<@ eCreate
-
+  let eLoanCreate = HKD.construct . Barbie.bmap (fmap Form.constructData . getCompose) <$> bFrom UI.<@ eCreate
   return Create {..}

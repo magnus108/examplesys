@@ -23,6 +23,6 @@ data FormData
   | SelectData Int
 
 data Form a = Form
-  { from :: Maybe (FormDataExpr a), -- FROM A FORM
+  { from :: Compose Maybe FormDataExpr a, -- FROM A FORM
     to :: a -> FormData -- TO A FORM
   }

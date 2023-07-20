@@ -187,8 +187,7 @@ main port = do
         let tLoanCreateForm = LoanCreate.tLoanCreateForm loanCreate
             eLoanCreateForm = R.rumors tLoanCreateForm
 
-        let tLoanCreate = LoanCreate.tLoanCreate loanCreate
-            eLoanCreate = R.rumors tLoanCreate
+        let eLoanCreate = LoanCreate.eLoanCreate loanCreate
 
         loanEnv <- loanEnvSetup config eLoanCreateUserFilter eLoanCreateItemFilter eLoanCreateForm eLoanCreate
 
@@ -450,7 +449,7 @@ loanEnvSetup config eUserFilter eItemFilter eLoanCreateForm eLoanCreate = mdo
   bLoanCreateItemFilter <- R.stepper "" $ Unsafe.head <$> R.unions [eItemFilter]
 
   bLoanCreateForm <-
-    R.stepper (HKD.build @Loan.Loan (Form2.Form Nothing Form2.SelectData) (Form2.Form Nothing Form2.SelectData)) $
+    R.stepper (HKD.build @Loan.Loan (Form2.Form (Compose Nothing) Form2.SelectData) (Form2.Form (Compose Nothing) Form2.SelectData)) $
       Unsafe.head
         <$> R.unions
           [eLoanCreateForm]
