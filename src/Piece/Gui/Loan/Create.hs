@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecursiveDo #-}
 
 module Piece.Gui.Loan.Create
@@ -59,7 +60,7 @@ mkSearchEntry bItems bSel bDisplay bFilterItem = do
 
 mkListBox :: R.Behavior [Int] -> R.Behavior (Form.Form Int) -> R.Behavior (Int -> UI.UI UI.Element) -> UI.UI ((R.Tidings (Form.Form Int), UI.Element), UI.Element)
 mkListBox bItems bSel bDisplay = do
-  let bSel' = (\x -> Form.from x) <$> bSel
+  let bSel' = (\x -> fmap (\(Form.SelectExpr a) -> a) $ getCompose $ Form.from x) <$> bSel
   listBox <- UI.listBox bItems bSel' bDisplay
   view <-
     UI.div
@@ -71,12 +72,10 @@ mkListBox bItems bSel bDisplay = do
                           UI.#+ [UI.element listBox UI.# UI.set (UI.attr "size") "5" UI.# UI.set UI.style [("height", "auto")]]
                       ]
             ]
-  let tSelect = undefined -- UI.userSelection listBox
-  -- let eSelect = R.rumors tSelect
-
-  --  let tSelect' = R.tidings bSel $ (\orig new -> Form.Form (Form.SelectExpr <$> new) (Form.to orig)) <$> bSel R.<@> eSelect
-  --  let listBox' = ListBox (UI.getElement listBox) undefined -- tSelect'
-  return ((tSelect, elem), view)
+  let tSelect = UI.userSelection listBox
+  let eSelect = R.rumors tSelect
+  let tSelect' = R.tidings bSel $ (\orig new -> Form.Form (Compose (Form.SelectExpr <$> new)) (Form.to orig)) <$> bSel R.<@> eSelect
+  return ((tSelect', UI.getElement listBox), view)
 
 setup :: Monad.AppEnv -> UI.UI Create
 setup env = mdo
